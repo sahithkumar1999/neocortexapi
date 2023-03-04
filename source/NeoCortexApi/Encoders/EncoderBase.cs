@@ -412,12 +412,12 @@ namespace NeoCortexApi.Encoders
             if (Encoders != null)
             {
                 // Merge decodings of all child encoders together
-                for (int i = 0; i < Encoders.Count; i++)
+                for (int v = 0; v < Encoders.Count; v++)
                 {
-                    string k = Convert.ToString(i);
+                    string k = Convert.ToString(v);
                     // Get the encoder and the encoded output
                     var (Encode, offset) = Encoders[k];
-                    var nextOffset = i < Encoders.Count - 1 ? Encoders[k + 1].offset : Width;
+                    var nextOffset = v < Encoders.Count - 1 ? Encoders[k + 1].offset : Width;
                     var fieldOutput = new BitArray(encoded.Cast<bool>().Skip(offset).Take(nextOffset - offset).ToArray());
                     var (subFieldsDict, subFieldsOrder) = encoder.Decode(fieldOutput, parentName);
 
