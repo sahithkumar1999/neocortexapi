@@ -778,36 +778,36 @@ namespace NeoCortexApi.Encoders
         //By defining _topDownMappingM as a member variable of the ScalarEncoder class,
         //you will be able to access it within the getTopDownMapping()
 
-        public int[][] GetTopDownMapping()
+        public double[][] GetTopDownMapping()
         {
-            if (_topDownMappingM == null)
+            if (this._topDownMappingM == null)
             {
                 if (Periodic)
                 {
-                    _topDownValues = Enumerable.Range(MinVal + Resolution / 2, (int)((MaxVal - MinVal) / Resolution))
+                    this._topDownValues = Enumerable.Range(this.MinVal + this.Resolution / 2, (int)((MaxVal - MinVal) / Resolution))
                                                 .Select(x => (double)x).ToArray();
                 }
                 else
                 {
-                    int numValues = (int)((maxval - minval) / resolution) + 1;
-                    _topDownValues = Enumerable.Range(minval, numValues)
-                                                .Select(x => x + resolution / 2.0).ToArray();
+                    int numValues = (int)((this.MaxVal - this.MinVal) / this.Resolution) + 1;
+                    this._topDownValues = Enumerable.Range((this.MinVal), numValues)
+                                                .Select(x => x + this.Resolution / 2.0).ToArray();
                 }
                   
-                int numCategories = _topDownValues.Length;
-                _topDownMappingM = new int[numCategories][];
+                int numCategories = this._topDownValues.Length;
+                int[][] _topDownMappingM = new int[numCategories][];
                 for (int i = 0; i < numCategories; i++)
                 {
-                    double value = _topDownValues[i];
-                    value = Math.Max(value, minval);
-                    value = Math.Min(value, maxval);
-                    int[] outputSpace = new int[n];
-                    encodeIntoArray(value, outputSpace, learn: false);
-                    _topDownMappingM[i] = outputSpace;
+                    double value = this._topDownValues[i];
+                    value = Math.Max(value, this.MinVal);
+                    value = Math.Min(value, this.MaxVal);
+                    int[] outputSpace = new int[N];
+                    this.EncodeIntoArray(value, outputSpace, learn: false);
+                    this._topDownMappingM[i] = outputSpace;
                 }
             }
 
-            return _topDownMappingM;
+            return this._topDownMappingM;
         }
 
 
@@ -824,12 +824,12 @@ namespace NeoCortexApi.Encoders
                 for (int bucketIdx = 0; bucketIdx < numBuckets; bucketIdx++)
                 {
                     int[] buckets = new int[] { bucketIdx };
-                    List<BucketInfo> bucketInfoList = this.getBucketInfo(buckets);
+                    List<BucketInfo> bucketInfoList = this.GetBucketInfo(buckets);
                     this.bucketValues.Add((double)bucketInfoList[0].Value);
                 }
             }
 
-            return this.bucketValues;
+            return bucketValues;
         }
 
         private int[][] GetTopDownMapping(object v)
@@ -845,12 +845,12 @@ namespace NeoCortexApi.Encoders
             //are executed during _getTopDownMapping() so this line must stay here
             var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
             // The "category" is simply the bucket index
-            var category = buckets;
+            int category = (int)buckets;
             var encoding = this._topDownMappingM.getRow(category);
             // Which input value does this correspond to?
             if (this.Periodic)
             {
-                inputVal = this.MinVal + this.Resolution / 2.0 + category * this.Resolution;
+                inputVal = (this.MinVal + this.Resolution )/ 2.0 + category * this.Resolution;
             }
             else
             {
@@ -904,27 +904,27 @@ namespace NeoCortexApi.Encoders
             };
         }
 
-       
-            
-       
 
 
 
 
-        public override string ToString()
+
+
+
+        public override string Strings()
         {
-            var @string = "ScalarEncoder:";
-            @string += $" min: {this.MinVal}";
-            @string += $" min: {this.MaxVal}";
-            @string += $" min: {this.W}";
-            @string += $" min: {this.N}";
-            @string += $" min: {this.Resolution}";
-            @string += $" min: {this.Radius}";
-            @string += $" min: {this.Periodic}";
-            @string += $" min: {this.NInternal}";
-            @string += $" min: {this.rangeInternal}";
-            @string += $" min: {this.Padding}";
-            return @string;
+            string str = "ScalarEncoder:";
+            str += $"  min: {this.MinVal}";
+            str += $"  max: {this.MaxVal}";
+            str += $"  w:   {this.W}";
+            str += $"  n:   {this.N}";
+            str += $"  resolution: {this.Resolution}";
+            str += $"  radius:     {this.Radius}";
+            str += $"  periodic: {this.Periodic}";
+            str += $"  nInternal: {this.NInternal}";
+            str += $"  rangeInternal: {this.RangeInternal}";
+            str += $"  padding: {this.Padding}";
+            return str;
         }
         public static object GetSchema(Type cls, object scalarEncoderProto)
         {
@@ -946,7 +946,7 @@ namespace NeoCortexApi.Encoders
                 radius = proto.Radius;
                 resolution = proto.Resolution;
             }
-            return new cls(W: proto.W, minval: proto.MinVal, maxval: proto.MaxVal, periodic: proto.periodic, n: proto.n, name: proto.name, verbosity: proto.verbosity, ClipInput: Encoder.ClipInput(proto.ClipInput), forced: true);
+            return new cls(W: proto.W, minval: proto.MinVal, maxval: proto.MaxVal, periodic: proto.periodic, N: proto.N, name: proto.name, verbosity: proto.verbosity, ClipInput: Encoder.ClipInput(proto.ClipInput), forced: true);
         }
 
         public abstract object Write(object proto)

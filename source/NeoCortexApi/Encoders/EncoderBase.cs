@@ -419,7 +419,7 @@ namespace NeoCortexApi.Encoders
                     var (Encode, offset) = Encoders[k];
                     var nextOffset = v < Encoders.Count - 1 ? Encoders[k + 1].offset : Width;
                     var fieldOutput = new BitArray(encoded.Cast<bool>().Skip(offset).Take(nextOffset - offset).ToArray());
-                    var (subFieldsDict, subFieldsOrder) = encoder.Decode(fieldOutput, parentName);
+                    (Dictionary<String, object> subFieldsDict, List<String>subFieldsOrder) = encoder.Decode(fieldOutput, parentName);
 
                     foreach (var (key, value) in subFieldsDict)
                     {
