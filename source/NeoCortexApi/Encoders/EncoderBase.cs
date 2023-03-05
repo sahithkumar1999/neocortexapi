@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Xml.Linq;
 using static System.Net.WebRequestMethods;
@@ -143,6 +144,9 @@ namespace NeoCortexApi.Encoders
             }
         }
 
+
+        public int numBuckets { get => (int)this["numBuckets"]; set => this["numBuckets"] = value; }
+        public double[][] mappingM;
 
         public int[] outputIndices
         {
@@ -293,7 +297,7 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         /// <typeparam name="T">class type parameter so that this method can return encoder specific value types</typeparam>
         /// <returns>list of items, each item representing the bucket value for that bucket.</returns>
-        public abstract List<T> GetBucketValues<T>();
+        
 
         /// <summary>
         /// Returns an array containing the sum of the right applied multiplications of each slice to the array passed in.
@@ -371,7 +375,7 @@ namespace NeoCortexApi.Encoders
 
         private Type defaultDtype = typeof(double);
 
-
+       
 
         public void EncodeIntoArray(object inputData, Array output)
         {
@@ -400,58 +404,12 @@ namespace NeoCortexApi.Encoders
             Console.WriteLine();
         }
 
-
-        public (Dictionary<string, (List<(double, double)> ranges, string desc)> fieldsDict, List<string> fieldsOrder) Decode(BitArray encoded, int i, string parentFieldName = "")
-        {
-            var fieldsDict = new Dictionary<string, (List<(double, double)> ranges, string desc)>();
-            var fieldsOrder = new List<string>();
-
-            // What is the effective parent name?
-            var parentName = parentFieldName == "" ? Name : $"{parentFieldName}.{Name}";
-
-            if (Encoders != null)
-            {
-                // Merge decodings of all child encoders together
-                for (int v = 0; v < Encoders.Count; v++)
-                {
-                    string k = Convert.ToString(v);
-                    // Get the encoder and the encoded output
-                    var (Encode, offset) = Encoders[k];
-                    var nextOffset = v < Encoders.Count - 1 ? Encoders[k + 1].offset : Width;
-                    var fieldOutput = new BitArray(encoded.Cast<bool>().Skip(offset).Take(nextOffset - offset).ToArray());
-                    (Dictionary<String, object> subFieldsDict, List<String>subFieldsOrder) = encoder.Decode(fieldOutput, parentName);
-
-                    foreach (var (key, value) in subFieldsDict)
-                    {
-                        var fieldName = $"{parentName}.{key}";
-                        if (!fieldsDict.TryGetValue(fieldName, out var existingValue))
-                        {
-                            existingValue = (new List<(double, double)>(), "");
-                            fieldsDict[fieldName] = existingValue;
-                            fieldsOrder.Add(key);
-                        }
-
-                        var (ranges, desc) = value;
-                        existingValue.ranges.AddRange(ranges);
-                        if (existingValue.desc != "" && desc != "")
-                        {
-                            existingValue.desc += ", ";
-                        }
-
-                        existingValue.desc += desc;
-                    }
-
-                    fieldsOrder.AddRange(subFieldsOrder);
-                }
-            }
-
-            return (fieldsDict, fieldsOrder);
-        }
+       
 
 
 
 
-        public string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
+        public static string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
         {
             var fieldsDict = decodeResults.Item1;
             var fieldsOrder = decodeResults.Item2;
@@ -487,7 +445,37 @@ namespace NeoCortexApi.Encoders
             return sb.ToString();
         }
 
-      
+
+        public double[] ClosenessScores(int[] expValues, int[] actValues, bool fractional = true)
+        {
+            // Fallback closeness is a percentage match
+            if (Encoders == null)
+            {
+                double err = Math.Abs(expValues[0] - actValues[0]);
+                if (fractional)
+                {
+                    double denom = Math.Max(expValues[0], actValues[0]);
+                    if (denom == 0)
+                    {
+                        denom = 1.0;
+                    }
+                    double closeness = 1.0 - err / denom;
+                    if (closeness < 0)
+                    {
+                        closeness = 0;
+                    }
+                    return new double[] { closeness };
+                }
+                else
+                {
+                    return new double[] { err };
+                }
+            }
+
+           
+
+            return retVals.ToArray();
+        }
 
 
 
@@ -523,6 +511,8 @@ namespace NeoCortexApi.Encoders
             return sb.ToString() + results;
         }
 
+        public abstract List<T> GetBucketValues<T>();
+        
         public override bool Equals(object obj)
         {
             var encoder = obj as EncoderBase;
@@ -579,6 +569,7 @@ namespace NeoCortexApi.Encoders
         }
         // Define the Encoders property as a dictionary of tuples
         public Dictionary<string, (object encoder, int offset)> Encoders { get; set; }
+        public IEnumerable<double> Values { get; private set; }
 
         public class EncoderInfo
         {
@@ -591,6 +582,11 @@ namespace NeoCortexApi.Encoders
             {
                 throw new NotImplementedException();
             }
+        }
+
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
         }
     }
 
