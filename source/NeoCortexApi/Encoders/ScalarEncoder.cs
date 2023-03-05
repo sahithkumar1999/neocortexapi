@@ -516,7 +516,7 @@ namespace NeoCortexApi.Encoders
         }
 
        
-        public int Decode(object encoded, object start, int newStruct, string parentFieldName = "")
+        public int Decode(object encoded,string parentFieldName = "")
         {
             (int[], (Dictionary<string, object>, List<object>)) Encode(int input)
             {
