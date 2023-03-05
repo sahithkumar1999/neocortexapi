@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Xml.Linq;
 using static System.Net.WebRequestMethods;
@@ -143,6 +144,17 @@ namespace NeoCortexApi.Encoders
             }
         }
 
+        public object retVal
+        {
+            get { return (int[])this["retVal"]; }
+            set { this["retVal"] = value; }
+        }
+
+
+
+
+        public int numBuckets { get => (int)this["numBuckets"]; set => this["numBuckets"] = value; }
+        public double[][] mappingM;
 
         public int[] outputIndices
         {
@@ -260,6 +272,25 @@ namespace NeoCortexApi.Encoders
         public abstract int Width { get; }
 
 
+
+
+        public struct EncoderResult
+        {
+            public object Value { get; }
+            public object Scalar { get; }
+            public object Encoding { get; }
+
+            public EncoderResult(object value, object scalar, object encoding)
+            {
+                Value = value;
+                Scalar = scalar;
+                Encoding = encoding;
+            }
+        }
+
+        
+
+
         /// <summary>
         /// Returns true if the underlying encoder works on deltas
         /// </summary>
@@ -293,7 +324,7 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         /// <typeparam name="T">class type parameter so that this method can return encoder specific value types</typeparam>
         /// <returns>list of items, each item representing the bucket value for that bucket.</returns>
-        public abstract List<T> GetBucketValues<T>();
+        
 
         /// <summary>
         /// Returns an array containing the sum of the right applied multiplications of each slice to the array passed in.
@@ -314,10 +345,10 @@ namespace NeoCortexApi.Encoders
             }
             return retVal;
         }
-        public class EncoderResult
+        /*public class EncoderResult
         {
             // TODO: Define the `EncoderResult` class
-        }
+        }*/
 
         public List<EncoderResult> GetBucketInfo(List<int> buckets)
         {
@@ -371,7 +402,7 @@ namespace NeoCortexApi.Encoders
 
         private Type defaultDtype = typeof(double);
 
-
+       
 
         public void EncodeIntoArray(object inputData, Array output)
         {
@@ -400,58 +431,12 @@ namespace NeoCortexApi.Encoders
             Console.WriteLine();
         }
 
-
-        public (Dictionary<string, (List<(double, double)> ranges, string desc)> fieldsDict, List<string> fieldsOrder) Decode(BitArray encoded, int i, string parentFieldName = "")
-        {
-            var fieldsDict = new Dictionary<string, (List<(double, double)> ranges, string desc)>();
-            var fieldsOrder = new List<string>();
-
-            // What is the effective parent name?
-            var parentName = parentFieldName == "" ? Name : $"{parentFieldName}.{Name}";
-
-            if (Encoders != null)
-            {
-                // Merge decodings of all child encoders together
-                for (int v = 0; v < Encoders.Count; v++)
-                {
-                    string k = Convert.ToString(v);
-                    // Get the encoder and the encoded output
-                    var (Encode, offset) = Encoders[k];
-                    var nextOffset = v < Encoders.Count - 1 ? Encoders[k + 1].offset : Width;
-                    var fieldOutput = new BitArray(encoded.Cast<bool>().Skip(offset).Take(nextOffset - offset).ToArray());
-                    (Dictionary<String, object> subFieldsDict, List<String>subFieldsOrder) = encoder.Decode(fieldOutput, parentName);
-
-                    foreach (var (key, value) in subFieldsDict)
-                    {
-                        var fieldName = $"{parentName}.{key}";
-                        if (!fieldsDict.TryGetValue(fieldName, out var existingValue))
-                        {
-                            existingValue = (new List<(double, double)>(), "");
-                            fieldsDict[fieldName] = existingValue;
-                            fieldsOrder.Add(key);
-                        }
-
-                        var (ranges, desc) = value;
-                        existingValue.ranges.AddRange(ranges);
-                        if (existingValue.desc != "" && desc != "")
-                        {
-                            existingValue.desc += ", ";
-                        }
-
-                        existingValue.desc += desc;
-                    }
-
-                    fieldsOrder.AddRange(subFieldsOrder);
-                }
-            }
-
-            return (fieldsDict, fieldsOrder);
-        }
+       
 
 
 
 
-        public string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
+        public static string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
         {
             var fieldsDict = decodeResults.Item1;
             var fieldsOrder = decodeResults.Item2;
@@ -487,9 +472,109 @@ namespace NeoCortexApi.Encoders
             return sb.ToString();
         }
 
-      
+
+        public double[] ClosenessScores(int[] expValues, int[] actValues, bool fractional = true)
+        {
+            // Fallback closeness is a percentage match
+            if (Encoders == null)
+            {
+                double err = Math.Abs(expValues[0] - actValues[0]);
+                if (fractional)
+                {
+                    double denom = Math.Max(expValues[0], actValues[0]);
+                    if (denom == 0)
+                    {
+                        denom = 1.0;
+                    }
+                    double closeness = 1.0 - err / denom;
+                    if (closeness < 0)
+                    {
+                        closeness = 0;
+                    }
+                    return new double[] { closeness };
+                }
+                else
+                {
+                    return new double[] { err };
+                }
+            }
+
+            var scalarIdx = 0;
+            var retVals = new double[] { };
+            foreach (var (name, encoder, offset) in Encoders)
+            {
+                var values = encoder.ClosenessScores(expValues.Skip(scalarIdx).ToArray(), actValues.Skip(scalarIdx).ToArray(), fractional);
+                scalarIdx += values.Length;
+                retVals = retVals.Concat(values).ToArray();
+            }
+
+            return retVals;
+        }
 
 
+
+
+        public List<EncoderResult> TopDownCompute(BitArray encoded)
+        {
+            // Fallback topdown compute
+            if (this.Encoders == null)
+            {
+                throw new InvalidOperationException("Must be implemented in sub-class");
+            }
+
+            // Concatenate the results from topDownCompute on each child encoder
+            List<EncoderResult> retVals = new List<EncoderResult>();
+            for (int i = 0; i < this.Encoders.Count; i++)
+            {
+                /*
+                LinkedListNode<(string name, Encoder encoder, int offset)> node = this.Encoders.First;
+                for (int j = 0; j < i; j++)
+                {
+                    node = node.Next;
+                }
+                (string name, Encoder encoder, int offset) = node.Value;
+                */
+
+
+                var (name, encoder, offset) = this.encoders[i];
+
+                int nextOffset = i < this.Encoders.Count - 1 ? this.Encoders[i + 1].Offset : this.Width;
+
+                var fieldOutput = encoded.Slice(offset, nextOffset - offset);
+                var values = encoder.TopDownCompute(fieldOutput);
+
+                if (values is IEnumerable<EncoderResult>)
+                {
+                    retVals.AddRange(values);
+                }
+                else
+                {
+                    retVals.Add(values);
+                }
+            }
+
+            return retVals;
+        }
+
+
+        public int[] RightVecProd(int[][] matrix, int[] vector)
+        {
+            int[] result = new int[matrix.Length];
+
+            for (int i = 0; i < matrix.Length; i++)
+            {
+                int sum = 0;
+
+                for (int j = 0; j < matrix[i].Length; j++)
+                {
+                    sum += matrix[i][j] * vector[j];
+                }
+
+                result[i] = sum;
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Returns the rendered similarity matrix for the whole rage of values between min and max.
@@ -523,6 +608,8 @@ namespace NeoCortexApi.Encoders
             return sb.ToString() + results;
         }
 
+        public abstract List<T> GetBucketValues<T>();
+        
         public override bool Equals(object obj)
         {
             var encoder = obj as EncoderBase;
@@ -579,6 +666,7 @@ namespace NeoCortexApi.Encoders
         }
         // Define the Encoders property as a dictionary of tuples
         public Dictionary<string, (object encoder, int offset)> Encoders { get; set; }
+        public IEnumerable<double> Values { get; private set; }
 
         public class EncoderInfo
         {
@@ -591,6 +679,16 @@ namespace NeoCortexApi.Encoders
             {
                 throw new NotImplementedException();
             }
+        }
+
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
+
+        double[] ISerializable.Encode(object inputData)
+        {
+            throw new NotImplementedException();
         }
     }
 
