@@ -832,7 +832,7 @@ namespace NeoCortexApi.Encoders
             return this.bucketValues;
         }
 
-        private int[,] GetTopDownMapping()
+        private int[][] GetTopDownMapping(object v)
         {
             throw new NotImplementedException();
         }
