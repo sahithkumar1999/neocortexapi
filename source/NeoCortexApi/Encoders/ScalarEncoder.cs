@@ -949,7 +949,7 @@ namespace NeoCortexApi.Encoders
             return new cls(W: proto.W, minval: proto.MinVal, maxval: proto.MaxVal, periodic: proto.periodic, n: proto.n, name: proto.name, verbosity: proto.verbosity, ClipInput: Encoder.ClipInput(proto.ClipInput), forced: true);
         }
 
-        public virtual object Write(object proto)
+        public abstract object Write(object proto)
         {
             proto.W = this.W;
             proto.MinVal = this.MinVal;
