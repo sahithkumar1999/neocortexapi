@@ -812,14 +812,15 @@ namespace NeoCortexApi.Encoders
         public List<double> GetBucketValues()
         {
             // Need to re-create?
-            if (bucketVal == null)
+            if (this.bucketVal == null)
             {
                 var topDownMappingM = GetTopDownMapping();
-                numBuckets = topDownMappingM.GetLength(0);
-                bucketValues = new List<double>();
+                this.numBuckets = topDownMappingM.GetLength(0);
+                List<double> bucketValues = new List<double>();
+                List<object> bucketValuesObj = this.bucketValues.Cast<object>().ToList();
                 for (int bucketIdx = 0; bucketIdx < numBuckets; bucketIdx++)
                 {
-                    bucketValues.Add(GetBucketInfo(new int[] { bucketIdx })[0].Value);
+                    this.bucketValues.Add(GetBucketInfo(new int { bucketIdx })[0].Value);
                 }
             }
 
