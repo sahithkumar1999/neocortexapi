@@ -308,19 +308,37 @@ namespace NeoCortexApi.Encoders
         /// <param name="inputData">The data to be encoded. Must be of type double.</param>
         /// <param name="bucketIndex">The bucket index.</param>
         /// <returns></returns>
-       /* public int? GetBucketIndex(object inputData)
+       public int? GetBucketIndex(object inputData)
         {
             double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
+
+            
+
             if (input == double.NaN)
             {
                 return null;
             }
 
+            minbin = this.GetFirstOnBit(input) ?? 0;
             int? bucketVal = GetFirstOnBit(input);
-
-            return bucketVal; 
+            // For periodic encoders, the bucket index is the index of the center bit
+            if (this.Periodic)
+            {
+                bucketVal = minbin + this.HalfWidth;
+                if (bucketVal < 0)
+                {
+                    bucketVal += this.N;
+                }
+                else
+                {
+                    /// for non-periodic encoders, the bucket index is the index of the left bit
+                    bucketVal = minbin;
+                }
+                return bucketVal;
+            }
+            return 0;
         }
-       */
+       
 
         /// <summary>
         /// Encodes the given scalar value as SDR as defined by HTM.
@@ -388,42 +406,8 @@ namespace NeoCortexApi.Encoders
         /// <typeparam name="T"></typeparam>
         /// <returns>The <see cref="List{T}"/></returns>
         ///  Vinay
-        int bucketIdx;
-
-        public int? GetBucketIndex(double input)
-        {
-            if (input is double && double.IsNaN((double)input))
-            {
-                input = double.NaN;
-            }
-
-            if (input == double.NaN)
-            {
-                return null;
-            }
-
-          
-
-            minbin = this.GetFirstOnBit(input) ?? 0;
-            int? bucketVal = GetFirstOnBit(input);
-            // For periodic encoders, the bucket index is the index of the center bit
-            if (this.Periodic)
-            {
-                bucketVal = minbin + this.HalfWidth;
-                if (bucketVal < 0)
-                {
-                    bucketVal += this.N;
-                }
-                else
-                {
-                    /// for non-periodic encoders, the bucket index is the index of the left bit
-                    bucketVal = minbin;
-                }
-                return bucketVal;
-            }
-            return 0;
-        }
-
+        
+       
 
 
         public int EncodeIntoArray(int input, double[] output, int n, bool learn = true)
