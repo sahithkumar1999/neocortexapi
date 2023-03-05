@@ -11,8 +11,7 @@ using System.IO;
 using System.Xml;
 using System.Linq;
 using System.Numerics;
-
-
+using Numpy.Models;
 
 namespace NeoCortexApi.Encoders
 {
@@ -811,14 +810,15 @@ namespace NeoCortexApi.Encoders
 
         public List<double> GetBucketValues()
         {
-            if (bucketVal == 0)
+            // Need to re-create?
+            if (bucketVal == null)
             {
                 var topDownMappingM = GetTopDownMapping();
                 numBuckets = topDownMappingM.GetLength(0);
-                List<double> bucketValues = new List<double>();
-                for (bucketVal = 0; bucketVal < numBuckets; bucketVal++)
+                bucketValues = new List<double>();
+                for (int bucketIdx = 0; bucketIdx < numBuckets; bucketIdx++)
                 {
-                    bucketValues.Add(GetBucketInfo(new int[] { bucketVal })[0].value);
+                    bucketValues.Add(GetBucketInfo(new int[] { bucketIdx })[0].Value);
                 }
             }
 
@@ -829,6 +829,7 @@ namespace NeoCortexApi.Encoders
         {
             throw new NotImplementedException();
         }
+        
 
         public int getBucketInfo(object buckets)
         {
@@ -839,7 +840,7 @@ namespace NeoCortexApi.Encoders
             var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
             // The "category" is simply the bucket index
             int category = (int)buckets;
-            var encoding = this._topDownMappingM.getRow(category);
+            var encoding = topDownMappingM[category];
             // Which input value does this correspond to?
             if (this.Periodic)
             {
@@ -855,12 +856,35 @@ namespace NeoCortexApi.Encoders
             };
         }
 
+       
+
+        private static int[] RightVecProd(int[][] matrix, int[] vector)
+        {
+            int[] result = new int[matrix.Length];
+
+            for (int i = 0; i < matrix.Length; i++)
+            {
+                int sum = 0;
+
+                for (int j = 0; j < matrix[i].Length; j++)
+                {
+                    sum += matrix[i][j] * vector[j];
+                }
+
+                result[i] = sum;
+            }
+
+            return result;
+        }
+
         public int topDownCompute(object encoded)
         {
             // Get/generate the topDown mapping table
             var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
+
+
             // See which "category" we match the closest.
-            var category = Matrix.rightVecProd(encoded).argmax();
+            var category = topDownMappingM.RightVecProd(encoded).Argmax();
             // Return that bucket info
             return this.getBucketInfo(new List<object> {
                     category
@@ -907,7 +931,7 @@ namespace NeoCortexApi.Encoders
 
 
 
-        public override string Strings()
+        public override string ToString()
         {
             string str = "ScalarEncoder:";
             str += $"  min: {this.MinVal}";
@@ -927,7 +951,8 @@ namespace NeoCortexApi.Encoders
             return scalarEncoderProto;
         }
 
-        public abstract object Write(object proto)
+        /*
+        public abstract object Write()
         {
             proto.W = this.W;
             proto.MinVal = this.MinVal;
@@ -940,9 +965,9 @@ namespace NeoCortexApi.Encoders
             proto.ClipInput = this.ClipInput;
             return proto;
         }
+        */
 
-
-        public static object read(object cls, object proto)
+        /*public static object read(object cls, object proto)
         {
             object resolution;
             object radius;
@@ -959,7 +984,7 @@ namespace NeoCortexApi.Encoders
             return new cls(W: proto.W, minval: proto.MinVal, maxval: proto.MaxVal, periodic: proto.Periodic, N: proto.N, name: proto.name, verbosity: proto.verbosity, ClipInput: Encoder.ClipInput(proto.ClipInput), forced: true);
         }
 
-       
+       */
 
        
 
