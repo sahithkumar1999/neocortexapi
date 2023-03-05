@@ -845,7 +845,7 @@ namespace NeoCortexApi.Encoders
             //are executed during _getTopDownMapping() so this line must stay here
             var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
             // The "category" is simply the bucket index
-            var category = buckets[0];
+            var category = buckets;
             var encoding = this._topDownMappingM.getRow(category);
             // Which input value does this correspond to?
             if (this.Periodic)
@@ -874,10 +874,10 @@ namespace NeoCortexApi.Encoders
             });
         }
 
-        public virtual object closenessScores(object expValues, object actValues, object fractional = null)
+        public virtual object closenessScores(double[] expValues, double[] actValues, object fractional = null)
         {
             object closeness;
-            var expValue = expValues[0];
+            double expValue = expValues[0];
             var actValue = actValues[0];
             if (this.Periodic)
             {
@@ -899,42 +899,14 @@ namespace NeoCortexApi.Encoders
             {
                 closeness = err;
             }
-            return numpy.array(new List<object> {
+            return new List<object> {
                     closeness
-            });
+            };
         }
 
        
-        //     
-        public virtual object closenessScoresNew(object expValues, object actValues, object fractional = null)
-        {
-            object closeness;
-            var expValue = expValues[0];
-            var actValue = actValues[0];
-            if (this.Periodic)
-            {
-                expValue = expValue % this.MaxVal;
-                actValue = actValue % this.MaxVal;
-            }
-            var err = Math.Abs(expValue - actValue);
-            if (this.Periodic)
-            {
-                err = Math.Min(err, this.MaxVal - err);
-            }
-            if ((bool)fractional)
-            {
-                var pctErr = (float)err / (this.MaxVal - this.MinVal);
-                pctErr = Math.Min(1.0, pctErr);
-                closeness = 1.0 - pctErr;
-            }   
-            else
-            {
-                closeness = err;
-            }
-            return numpy.array(new List<object> {
-                    closeness
-                });
-        }
+            
+       
 
 
 
