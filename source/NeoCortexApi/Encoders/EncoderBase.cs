@@ -511,6 +511,9 @@ namespace NeoCortexApi.Encoders
             return retVals;
         }
 
+
+
+
         public List<EncoderResult> TopDownCompute(BitArray encoded)
         {
             // Fallback topdown compute
@@ -523,6 +526,16 @@ namespace NeoCortexApi.Encoders
             List<EncoderResult> retVals = new List<EncoderResult>();
             for (int i = 0; i < this.Encoders.Count; i++)
             {
+                /*
+                LinkedListNode<(string name, Encoder encoder, int offset)> node = this.Encoders.First;
+                for (int j = 0; j < i; j++)
+                {
+                    node = node.Next;
+                }
+                (string name, Encoder encoder, int offset) = node.Value;
+                */
+
+
                 var (name, encoder, offset) = this.encoders[i];
 
                 int nextOffset = i < this.Encoders.Count - 1 ? this.Encoders[i + 1].Offset : this.Width;

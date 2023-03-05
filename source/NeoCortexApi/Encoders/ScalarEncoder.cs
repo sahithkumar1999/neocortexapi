@@ -11,7 +11,8 @@ using System.IO;
 using System.Xml;
 using System.Linq;
 using System.Numerics;
-using Numpy.Models;
+
+
 
 namespace NeoCortexApi.Encoders
 {
