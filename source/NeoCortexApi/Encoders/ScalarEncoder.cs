@@ -323,22 +323,22 @@ namespace NeoCortexApi.Encoders
             int? bucketVal = GetFirstOnBit(input);
 
             return bucketVal;
-            // For periodic encoders, the bucket index is the index of the center bit
-            if (this.Periodic)
-            {
-                bucketVal = minbin + this.HalfWidth;
-                if (bucketVal < 0)
-                {
-                    bucketVal += this.N;
-                }
-                else
-                {
-                    /// for non-periodic encoders, the bucket index is the index of the left bit
-                    bucketVal = minbin;
-                }
-                return bucketVal;
-            }
-            return 0;
+            //// For periodic encoders, the bucket index is the index of the center bit
+            //if (this.Periodic)
+            //{
+            //    bucketVal = minbin + this.HalfWidth;
+            //    if (bucketVal < 0)
+            //    {
+            //        bucketVal += this.N;
+            //    }
+            //    else
+            //    {
+            //        /// for non-periodic encoders, the bucket index is the index of the left bit
+            //        bucketVal = minbin;
+            //    }
+            //    return bucketVal;
+            //}
+            //return 0;
         }
        
 
