@@ -319,8 +319,10 @@ namespace NeoCortexApi.Encoders
                 return null;
             }
 
-            minbin = this.GetFirstOnBit(input) ?? 0;
+           // minbin = this.GetFirstOnBit(input) ?? 0;
             int? bucketVal = GetFirstOnBit(input);
+
+            return bucketVal;
             // For periodic encoders, the bucket index is the index of the center bit
             if (this.Periodic)
             {
