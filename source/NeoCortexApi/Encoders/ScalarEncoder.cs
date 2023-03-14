@@ -227,7 +227,6 @@ namespace NeoCortexApi.Encoders
 
 
 
-
         /// <summary>
         /// Gets the index of the first non-zero bit.
         /// </summary>
@@ -342,6 +341,75 @@ namespace NeoCortexApi.Encoders
         }
        
 
+
+        /// <summary>
+        /// Gets the bucket index of the given value.
+        /// </summary>
+        /// <param name="inputData">The data to be encoded. Must be of type double.</param>
+        /// <param name="bucketIndex">The bucket index.</param>
+        /// <returns></returns>
+
+
+        public int? GetBucketIndex(decimal inputData)
+        {
+            if ((double)inputData < MinVal || (double)inputData > MaxVal)
+            {
+                return null;
+            }
+
+            decimal fraction = (decimal)(((double)inputData - MinVal) / (MaxVal - MinVal));
+
+            if (Periodic)
+            {
+                fraction = fraction - Math.Floor(fraction);
+            }
+
+            int bucketIndex = (int)Math.Floor(fraction * N);
+
+            if (bucketIndex == N)
+            {
+                bucketIndex = 0;
+            }
+
+            // For periodic encoders, the center of the first bucket is considered equal to the center of the last bucket
+            if (Periodic && bucketIndex == 0 && Math.Abs((double)inputData - MaxVal) <= 0.0000000000000000000000000001)
+            {
+                bucketIndex = N - 1;
+            }
+
+            // Check if the input value is within the radius of the bucket
+            if (Radius >= 0)
+            {
+                decimal bucketWidth = ((decimal)MaxVal - (decimal)MinVal) / (decimal)N;
+                decimal bucketCenter = (bucketWidth * bucketIndex) + (bucketWidth / 2) + (decimal)MinVal;
+
+                if (Math.Abs((decimal)inputData - bucketCenter) > (decimal)Radius * bucketWidth)
+                {
+                    return null;
+                }
+            }
+
+            return bucketIndex;
+
+        }
+
+
+
+        /*
+                public int? GetBucketIndex(object inputData)
+                {
+                    double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
+                    if (input == double.NaN)
+                    {
+                        return null;
+                    }
+
+                    int? bucketVal = GetFirstOnBit(input);
+
+                    return bucketVal;
+                }
+               */
+
         /// <summary>
         /// Encodes the given scalar value as SDR as defined by HTM.
         /// </summary>
@@ -389,6 +457,7 @@ namespace NeoCortexApi.Encoders
             // Output 1-D array of same length resulted in parameter N    
             return output;
         }
+            
 
 
         /// <summary>

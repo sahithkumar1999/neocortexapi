@@ -314,6 +314,7 @@ namespace NeoCortexApi.Encoders
         /// <returns>The <see cref="int[]"/></returns>
         //public abstract int[] Encode(object inputData);
 
+
        
 
         /// <summary>
