@@ -302,6 +302,7 @@ namespace UnitTestsProject.EncoderTests
 
 
 
+
             /// <summary>
             /// The DecodeTest
             /// </summary>
