@@ -135,8 +135,8 @@ namespace NeoCortexApi.Encoders
 
 
         }
-        
-         
+
+
 
         public void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
         {
@@ -204,12 +204,12 @@ namespace NeoCortexApi.Encoders
 
             if (!Periodic)
             {
-               
+
                 Resolution = RangeInternal / (N - W);
             }
             else
             {
-                
+
                 Resolution = (float)RangeInternal / this.N;
             }
             Radius = W * Resolution;
@@ -311,14 +311,34 @@ namespace NeoCortexApi.Encoders
        /* public int? GetBucketIndex(object inputData)
         {
             double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
+
+
+
             if (input == double.NaN)
             {
                 return null;
             }
 
+            // minbin = this.GetFirstOnBit(input) ?? 0;
             int? bucketVal = GetFirstOnBit(input);
 
-            return bucketVal; 
+            return bucketVal;
+            //// For periodic encoders, the bucket index is the index of the center bit
+            //if (this.Periodic)
+            //{
+            //    bucketVal = minbin + this.HalfWidth;
+            //    if (bucketVal < 0)
+            //    {
+            //        bucketVal += this.N;
+            //    }
+            //    else
+            //    {
+            //        /// for non-periodic encoders, the bucket index is the index of the left bit
+            //        bucketVal = minbin;
+            //    }
+            //    return bucketVal;
+            //}
+            //return 0;
         }
        */
 
@@ -388,41 +408,7 @@ namespace NeoCortexApi.Encoders
         /// <typeparam name="T"></typeparam>
         /// <returns>The <see cref="List{T}"/></returns>
         ///  Vinay
-        int bucketIdx;
 
-        public int? GetBucketIndex(double input)
-        {
-            if (input is double && double.IsNaN((double)input))
-            {
-                input = double.NaN;
-            }
-
-            if (input == double.NaN)
-            {
-                return null;
-            }
-
-          
-
-            minbin = this.GetFirstOnBit(input) ?? 0;
-            int? bucketVal = GetFirstOnBit(input);
-            // For periodic encoders, the bucket index is the index of the center bit
-            if (this.Periodic)
-            {
-                bucketVal = minbin + this.HalfWidth;
-                if (bucketVal < 0)
-                {
-                    bucketVal += this.N;
-                }
-                else
-                {
-                    /// for non-periodic encoders, the bucket index is the index of the left bit
-                    bucketVal = minbin;
-                }
-                return bucketVal;
-            }
-            return 0;
-        }
 
 
 
@@ -440,7 +426,12 @@ namespace NeoCortexApi.Encoders
             }
             bucketVal = (int)GetFirstOnBit(input);
 
-            if (bucketVal == 0)
+          
+
+            minbin = this.GetFirstOnBit(input) ?? 0;
+            int? bucketVal = GetFirstOnBit(input);
+            // For periodic encoders, the bucket index is the index of the center bit
+            if (this.Periodic)
             {
                 // None is returned for missing value
                 for (int i = 0; i < this.N; i++)
@@ -515,8 +506,8 @@ namespace NeoCortexApi.Encoders
             throw new NotImplementedException();
         }
 
-       
-        public int Decode(object encoded,string parentFieldName = "")
+
+        public int Decode(object encoded, string parentFieldName = "")
         {
             (int[], (Dictionary<string, object>, List<object>)) Encode(int input)
             {
@@ -530,10 +521,8 @@ namespace NeoCortexApi.Encoders
                     return (new int[0], (new Dictionary<string, object>(), new List<object>()));
                 }
 
-                var result = (tmpOutput, (new Dictionary<string, object>(), new List<object>()));
-                return result;
-            }
-            
+                }
+
 
 
             // First, assume the input pool is not sampled 100%, and fill in the
@@ -716,7 +705,7 @@ namespace NeoCortexApi.Encoders
             var result = new Dictionary<string, Tuple<List<double[]>, List<string>>>();
             List<double[]> doubleRanges = ranges.Select(r => r.Select(x => (double)x).ToArray()).ToList();
             result.Add(fieldName, new Tuple<List<double[]>, List<string>>(doubleRanges, new List<string>() { fieldName }));
-            int Result=Convert.ToInt32(result);
+            int Result = Convert.ToInt32(result);
             return Result;
 
         }
@@ -731,7 +720,7 @@ namespace NeoCortexApi.Encoders
             throw new NotImplementedException();
         }
 
-        
+
 
         private double[] EncodeIntoArray(double value, int input)
         {
@@ -769,6 +758,14 @@ namespace NeoCortexApi.Encoders
 
 
 
+        public object Get_topDownValues()
+        {
+            return _topDownValues;
+        }
+
+
+
+
 
         public object Get_topDownValues()
         {
@@ -780,62 +777,74 @@ namespace NeoCortexApi.Encoders
 
         public double[][] GetTopDownMapping()
         {
+            // Do we need to build up our reverse mapping table
             if (this._topDownMappingM == null)
             {
+                // The input scalar value corresponding to each possible output encoding
+                double[] topDownValues;
                 if (Periodic)
                 {
-                    this._topDownValues = Enumerable.Range(this.MinVal + this.Resolution / 2, (int)((MaxVal - MinVal) / Resolution))
-                                                .Select(x => (double)x).ToArray();
+                    topDownValues = Enumerable.Range(0, nInternal)
+                                               .Select(i => MinVal + (i + 0.5) * Resolution)
+                                               .Where(val => val < MaxVal)
+                                               .ToArray();
                 }
                 else
                 {
-                    int numValues = (int)((this.MaxVal - this.MinVal) / this.Resolution) + 1;
-                    this._topDownValues = Enumerable.Range((this.MinVal), numValues)
-                                                .Select(x => x + this.Resolution / 2.0).ToArray();
+                    topDownValues = Enumerable.Range(0, nInternal + 1)
+                                               .Select(i => MinVal + i * Resolution)
+                                               .Where(val => val <= MaxVal)
+                                               .ToArray();
                 }
-                  
-                int numCategories = this._topDownValues.Length;
-                int[][] _topDownMappingM = new int[numCategories][];
+
+                // Each row represents an encoded output pattern
+                int numCategories = topDownValues.Length;
+                mappingM = new double[numCategories][];
                 for (int i = 0; i < numCategories; i++)
                 {
-                    double value = this._topDownValues[i];
-                    value = Math.Max(value, this.MinVal);
-                    value = Math.Min(value, this.MaxVal);
-                    int[] outputSpace = new int[N];
-                    this.EncodeIntoArray(value, outputSpace, learn: false);
-                    this._topDownMappingM[i] = outputSpace;
+                    double value = topDownValues[i];
+                    value = Math.Max(value, MinVal);
+                    value = Math.Min(value, MaxVal);
+                    double[] outputSpace = new double[N];
+                    EncodeIntoArray(value, outputSpace, learn: false);
+                    mappingM[i] = outputSpace;
                 }
+                double[][] _topDownMappingM = null;
+
+                _topDownMappingM = mappingM;
             }
 
-            return this._topDownMappingM;
+            return mappingM;
         }
 
-
+        private void EncodeIntoArray(double value, double[] outputSpace, bool learn)
+        {
+            throw new NotImplementedException();
+        }
 
         public List<double> GetBucketValues()
         {
             // Need to re-create?
-            if (this.bucketValues == null)
+            if (this.bucketVal == null)
             {
-                int[,] topDownMappingM = this.GetTopDownMapping();
-                int numBuckets = topDownMappingM.GetLength(0);
-                List<object> list = new List<object>();
-                this.bucketValues = list;
+                var topDownMappingM = GetTopDownMapping();
+                this.numBuckets = topDownMappingM.GetLength(0);
+                List<double> bucketValues = new List<double>();
+                List<object> bucketValuesObj = this.bucketValues.Cast<object>().ToList();
                 for (int bucketIdx = 0; bucketIdx < numBuckets; bucketIdx++)
                 {
-                    int[] buckets = new int[] { bucketIdx };
-                    List<BucketInfo> bucketInfoList = this.GetBucketInfo(buckets);
-                    this.bucketValues.Add((double)bucketInfoList[0].Value);
+                    this.bucketValues.Add(GetBucketInfo(new int { bucketIdx })[0].Value);
                 }
             }
 
-            return bucketValues;
+            return bucketVal;
         }
 
         private int[][] GetTopDownMapping(object v)
         {
             throw new NotImplementedException();
         }
+
 
         public int getBucketInfo(object buckets)
         {
@@ -846,11 +855,11 @@ namespace NeoCortexApi.Encoders
             var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
             // The "category" is simply the bucket index
             int category = (int)buckets;
-            var encoding = this._topDownMappingM.getRow(category);
+            var encoding = topDownMappingM[category];
             // Which input value does this correspond to?
             if (this.Periodic)
             {
-                inputVal = (this.MinVal + this.Resolution )/ 2.0 + category * this.Resolution;
+                inputVal = (this.MinVal + this.Resolution) / 2.0 + category * this.Resolution;
             }
             else
             {
@@ -862,11 +871,35 @@ namespace NeoCortexApi.Encoders
             };
         }
 
+
+
+        private static int[] RightVecProd(int[][] matrix, int[] vector)
+        {
+            int[] result = new int[matrix.Length];
+
+            for (int i = 0; i < matrix.Length; i++)
+            {
+                int sum = 0;
+
+                for (int j = 0; j < matrix[i].Length; j++)
+                {
+                    sum += matrix[i][j] * vector[j];
+                }
+
+                result[i] = sum;
+            }
+
+            return result;
+        }
+
         public int topDownCompute(object encoded)
         {
             // Get/generate the topDown mapping table
             var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
+
+
             // See which "category" we match the closest.
+            var category = topDownMappingM.RightVecProd(encoded).Argmax();
             var category = Matrix.rightVecProd(encoded).argmax();
             // Return that bucket info
             return this.getBucketInfo(new List<object> {
@@ -905,13 +938,16 @@ namespace NeoCortexApi.Encoders
         }
 
 
+        public override List<T> GetBucketValues<T>()
+        {
+            throw new NotImplementedException();
+        }
 
 
 
 
 
-
-        public override string Strings()
+        public override string ToString()
         {
             string str = "ScalarEncoder:";
             str += $"  min: {this.MinVal}";
@@ -931,8 +967,23 @@ namespace NeoCortexApi.Encoders
             return scalarEncoderProto;
         }
 
-        
-        public static object read(object cls, object proto)
+        /*
+        public abstract object Write()
+        {
+            proto.W = this.W;
+            proto.MinVal = this.MinVal;
+            proto.MaxVal = this.MaxVal;
+            proto.Periodic = this.Periodic;
+            // Radius and resolution can be recalculated based on n
+            proto.N = this.N;
+            proto.Name = this.Name;
+            proto.verbosity = this.verbosity;
+            proto.ClipInput = this.ClipInput;
+            return proto;
+        }
+        */
+
+        /*public static object read(object cls, object proto)
         {
             object resolution;
             object radius;
@@ -946,27 +997,11 @@ namespace NeoCortexApi.Encoders
                 radius = proto.Radius;
                 resolution = proto.Resolution;
             }
-            return new cls(W: proto.W, minval: proto.MinVal, maxval: proto.MaxVal, periodic: proto.periodic, N: proto.N, name: proto.name, verbosity: proto.verbosity, ClipInput: Encoder.ClipInput(proto.ClipInput), forced: true);
+            return new cls(W: proto.W, minval: proto.MinVal, maxval: proto.MaxVal, periodic: proto.Periodic, N: proto.N, name: proto.name, verbosity: proto.verbosity, ClipInput: Encoder.ClipInput(proto.ClipInput), forced: true);
         }
+       */
 
-        public abstract object Write(object proto)
-        {
-            proto.W = this.W;
-            proto.MinVal = this.MinVal;
-            proto.MaxVal = this.MaxVal;
-            proto.Periodic = this.Periodic;
-            // Radius and resolution can be recalculated based on n
-            proto.N = this.N;
-            proto.Name = this.Name;
-            proto.verbosity = this.verbosity;
-            proto.ClipInput = this.ClipInput;
-            return proto;
-        }
 
-        public override List<T> GetBucketValues<T>()
-        {
-            throw new NotImplementedException();
-        }
 
         public override void EncodeIntoArray(object inputData, double[] output)
         {
@@ -1041,7 +1076,7 @@ namespace NeoCortexApi.Encoders
             return new NewStruct(value.Item1, value.Item2);
         }
 
-        
+
     }
 
     internal struct NewStruct1
