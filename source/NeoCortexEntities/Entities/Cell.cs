@@ -300,7 +300,5 @@ namespace NeoCortexApi.Entities
             return cell;
         }
 
-      
-        #endregion
     }
 }

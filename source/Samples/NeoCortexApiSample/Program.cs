@@ -32,7 +32,7 @@ namespace NeoCortexApiSample
             //gridCells.Run();
 
            // RunMultiSimpleSequenceLearningExperiment();
-           RunMultiSequenceLearningExperiment();
+           RunMultiSequenceLearningExperiment();   
         }
 
         private static void RunMultiSimpleSequenceLearningExperiment()

@@ -55,6 +55,8 @@ namespace NeoCortexApi.Network
         /// Outputs of evey module in the pipeline.
         /// </summary>
         private Dictionary<string, object> m_Results = new Dictionary<string, object>();
+        private object field2;
+        private object field1;
 
         /// <summary>
         /// Gets the result of the specific module inside of the layer's pipeline.
@@ -121,6 +123,18 @@ namespace NeoCortexApi.Network
 
         #endregion
 
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + field1.GetHashCode();
+                hash = hash * 23 + field2.GetHashCode();
+                // add more fields as needed
+                return hash;
+            }
+        }
+
         public override bool Equals(object obj)
         {
             var layer = obj as CortexLayer<TIN, TOUT>;
@@ -173,6 +187,11 @@ namespace NeoCortexApi.Network
         }
 
         public static object Deserialize<T>(StreamReader sr, string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public double[] Encode(object inputData)
         {
             throw new NotImplementedException();
         }

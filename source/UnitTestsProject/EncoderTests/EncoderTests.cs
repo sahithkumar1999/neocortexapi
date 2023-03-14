@@ -286,6 +286,11 @@ namespace UnitTestsProject.EncoderTests
             throw new NotImplementedException();
         }
 
+        public override void EncodeIntoArray(object inputData, double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
         public override int Width
         {
             get
@@ -353,6 +358,11 @@ namespace UnitTestsProject.EncoderTests
         }
 
         public override List<B> GetBucketValues<B>()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EncodeIntoArray(object inputData, double[] output)
         {
             throw new NotImplementedException();
         }

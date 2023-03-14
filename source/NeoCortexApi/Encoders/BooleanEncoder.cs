@@ -17,6 +17,11 @@ namespace NeoCortexApi.Encoders
             throw new NotImplementedException();
         }
 
+        public override void EncodeIntoArray(object inputData, double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
         public override List<T> GetBucketValues<T>()
         {
             throw new NotImplementedException();

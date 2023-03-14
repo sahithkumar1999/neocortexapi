@@ -3,15 +3,21 @@
 using NeoCortexApi.Entities;
 using NeoCortexApi.Utility;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
+using System.Xml.Linq;
+using static System.Net.WebRequestMethods;
 
 namespace NeoCortexApi.Encoders
 {
     /// <summary>
     /// Base class for all encoders.
     /// </summary> 
+    /// 
     public abstract class EncoderBase : IHtmModule, ISerializable
     {
         /// <summary>
@@ -50,6 +56,8 @@ namespace NeoCortexApi.Encoders
         // Moved to MultiEncoder.
         //protected Dictionary<EncoderTuple, List<EncoderTuple>> encoders;
         protected List<String> scalarNames;
+        private int offset;
+        private object encoder;
 
         /// <summary>
         /// Default constructor.
@@ -87,6 +95,10 @@ namespace NeoCortexApi.Encoders
                 Radius = -1.0;
                 Periodic = false;
                 ClipInput = false;
+                verbosity = 0;
+                forced = false;
+
+
 
                 foreach (var item in encoderSettings)
                 {
@@ -132,12 +144,42 @@ namespace NeoCortexApi.Encoders
             }
         }
 
-   
+        public object retVal
+        {
+            get { return (int[])this["retVal"]; }
+            set { this["retVal"] = value; }
+        }
 
+
+
+
+        public int numBuckets { get => (int)this["numBuckets"]; set => this["numBuckets"] = value; }
+        public double[][] mappingM;
+
+        public int[] outputIndices
+        {
+            get { return (int[])this["outputIndices"]; }
+            set { this["outputIndices"] = value; }
+        }
+
+        public int[] run
+        {
+            get { return (int[])this["run"]; }
+            set { this["run"] = value; }
+        }
+
+        public int[] nz
+        {
+            get { return (int[])this["nz"]; }
+            set { this["nz"] = value; }
+        }
         /// <summary>
         /// In real cortex mode, W must be >= 21. Empirical value.
         /// </summary>
         public bool IsRealCortexModel { get => (bool)this["IsRealCortexModel"]; set => this["IsRealCortexModel"] = (bool)value; }
+
+        public bool forced { get => (bool)this["forced"]; set => this["forced"] = (bool)value; }
+
 
         /// <summary>
         /// The width of output vector of encoder. 
@@ -146,12 +188,38 @@ namespace NeoCortexApi.Encoders
 
         public int N { get => (int)this["N"]; set => this["N"] = (int)value; }
 
+        public int verbosity { get => (int)this["verbosity"]; set => this["verbosity"] = (int)value; }
+
         public int NInternal { get => (int)this["NInternal"]; set => this["NInternal"] = (int)value; }
 
+        public int subLen { get => (int)this["subLen"]; set => this["subLen"] = (int)value; }
+
+
+        public int maxZerosInARow { get => (int)this["maxZerosInARow"]; set => this["maxZerosInARow"] = (int)value; }
         /// <summary>
         /// Number of bits set on one, which represents single encoded value.
         /// </summary>
         public int W { get => (int)this["W"]; set => this["W"] = (int)value; }
+
+
+        public int Start { get => (int)this["Start"]; set => this["Start"] = (int)value; }
+
+        public int runLen { get => (int)this["runLen"]; set => this["runLen"] = (int)value; }
+        public int left { get => (int)this["left"]; set => this["left"] = (int)value; }
+
+        public double inMin { get => (double)this["inMin"]; set => this["inMin"] = (double)value; }
+
+        public string fieldName { get => (string)this["fieldName"]; set => this["fieldName"] = (string)value; }
+
+        public double inMax { get => (double)this["inMax"]; set => this["inMax"] = (double)value; }
+
+        public int right { get => (int)this["right"]; set => this["right"] = (int)value; }
+
+        //This matrix is used for the topDownCompute. We build it the first time
+        //topDownCompute is called
+        public int _topDownMappingM { get => (int)this["_topDownMappingM"]; set => this["_topDownMappingM"] = (int)value; }
+
+        public int _topDownValues { get => (int)this["_topDownValues"]; set => this["_topDownValues"] = (int)value; }
 
         public double MinVal { get => (double)this["MinVal"]; set => this["MinVal"] = (double)value; }
 
@@ -162,6 +230,9 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public double Radius { get => (double)this["Radius"]; set => this["Radius"] = (double)value; }
 
+        public double bucketVal { get => (double)this["bucketVal"]; set => this["bucketVal"] = (double)value; }
+
+       
         /// <summary>
         /// How many input values are embedded in the single encoding bit. Res = (max-min)/N.
         /// </summary>
@@ -186,17 +257,38 @@ namespace NeoCortexApi.Encoders
         public int Offset { get => (int)this["Offset"]; set => this["Offset"] = value; }
 
 
-        public double RangeInternal { get => rangeInternal; set => this.rangeInternal = value; }
+        public double RangeInternal { get => RangeInternal; set => this.RangeInternal = value; }
 
         //public int NumOfBits { get => m_NumOfBits; set => this.m_NumOfBits = value; }     
 
-        public int HalfWidth { get => halfWidth; set => this.halfWidth = value; }
+        public int HalfWidth { get => HalfWidth; set => this.HalfWidth = value; }
 
+        public int minbin { get => (int)this["minbin"]; set => this["minbin"] = value; }
 
+        public int maxbin { get => (int)this["maxbin"]; set => this["maxbin"] = value; }
         ///<summary>
         /// Gets the output width, in bits.
         ///</summary>
         public abstract int Width { get; }
+
+
+
+
+        public struct EncoderResult
+        {
+            public object Value { get; }
+            public object Scalar { get; }
+            public object Encoding { get; }
+
+            public EncoderResult(object value, object scalar, object encoding)
+            {
+                Value = value;
+                Scalar = scalar;
+                Encoding = encoding;
+            }
+        }
+
+        
 
 
         /// <summary>
@@ -214,6 +306,10 @@ namespace NeoCortexApi.Encoders
         /// Note: The output array is reused, so clear it before updating it.
         /// </remarks>
         public abstract int[] Encode(object inputData);
+        /// Convenience wrapper for :meth:`.encodeIntoArray`.
+        /// This may be less efficient because it allocates a new numpy array every call. 
+        /// :param inputData: input data to be encode
+        /// :return: a numpy array with the encoded representation of inputData
 
         /// <summary>
         /// The Encode
@@ -222,12 +318,7 @@ namespace NeoCortexApi.Encoders
         /// <returns>The <see cref="int[]"/></returns>
         //public abstract int[] Encode(object inputData);
 
-        public IModuleData Compute(int[] input, bool learn)
-        {
-            var result = Encode(input);
 
-            return null;
-        }
 
         /// <summary>
         /// Returns a list of items, one for each bucket defined by this encoder. Each item is the value assigned to that bucket, this is the same as the
@@ -237,7 +328,7 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         /// <typeparam name="T">class type parameter so that this method can return encoder specific value types</typeparam>
         /// <returns>list of items, each item representing the bucket value for that bucket.</returns>
-        public abstract List<T> GetBucketValues<T>();
+
 
         /// <summary>
         /// Returns an array containing the sum of the right applied multiplications of each slice to the array passed in.
@@ -258,7 +349,235 @@ namespace NeoCortexApi.Encoders
             }
             return retVal;
         }
+        /*public class EncoderResult
+        {
+            // TODO: Define the `EncoderResult` class
+        }*/
 
+        public List<EncoderResult> GetBucketInfo(List<int> buckets)
+        {
+            // Fall back topdown compute
+            if (Encoders == null)
+            {
+                throw new InvalidOperationException("Must be implemented in sub-class");
+            }
+
+            // Concatenate the results from bucketInfo on each child encoder
+            List<EncoderResult> retVals = new List<EncoderResult>();
+            int bucketOffset = 0;
+            for (int i = 0; i < Encoders.Count; i++)
+            {
+                string s = Convert.ToString(i);
+                EncoderInfo encoderInfo = Encoders[s];
+                IEncoder encoder = (IEncoder)encoderInfo.encoder;
+                int offset = encoderInfo.offset;
+                string name = encoderInfo.Name;
+                //(string name, IEncoder encoder, int offset) = Encoders[i];
+
+                int nextBucketOffset;
+                if (encoder.Encoders != null)
+                {
+                    nextBucketOffset = bucketOffset + ((Array)encoder.Encoders).Length;
+
+                }
+                else
+                {
+                    nextBucketOffset = bucketOffset + 1;
+                }
+
+                List<int> bucketIndices = buckets.GetRange(bucketOffset, nextBucketOffset - bucketOffset);
+                List<EncoderResult> values = encoder.GetBucketInfo(bucketIndices);
+
+                retVals.AddRange(values);
+
+                bucketOffset = nextBucketOffset;
+            }
+
+            return retVals;
+        }
+        public abstract void EncodeIntoArray(object inputData, double[] output);
+       
+
+        public int GetWidth()
+        {
+            // TODO: Return the appropriate width value
+            throw new NotImplementedException();
+        }
+
+        private Type defaultDtype = typeof(double);
+
+       
+
+        public void EncodeIntoArray(object inputData, Array output)
+        {
+            // Encodes inputData and puts the encoded value into the output array, which is a 1-D array of length returned by GetWidth().
+            // .. note:: The output array is reused, so clear it before updating it.
+            throw new NotImplementedException();
+        }
+
+        public virtual List<(string name, int offset)> GetDescription()
+        {
+            throw new NotImplementedException("GetDescription must be implemented by all subclasses");
+        }
+
+        public void PPrint(double[] output, string prefix = "")
+        {
+            Console.Write(prefix);
+            var description = this.GetDescription().Concat(new List<(string, int)> { ("end", this.GetWidth()) }).ToList();
+
+            for (int i = 0; i < description.Count - 1; i++)
+            {
+                int offset = description[i].Item2;
+                int nextoffset = description[i + 1].Item2;
+                Console.Write($" {bitsToString(output, offset, nextoffset)} |");
+            }
+
+            Console.WriteLine();
+        }
+
+       
+
+
+
+
+        public static string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
+        {
+            var fieldsDict = decodeResults.Item1;
+            var fieldsOrder = decodeResults.Item2;
+            var desc = "";
+
+            foreach (var fieldName in fieldsOrder)
+            {
+                var ranges = fieldsDict[fieldName].Item1;
+                var rangesStr = fieldsDict[fieldName].Item2;
+                if (desc.Length > 0)
+                {
+                    desc += $", {fieldName}:";
+                }
+                else
+                {
+                    desc += $"{fieldName}:";
+                }
+
+                desc += $"[{rangesStr}]";
+            }
+
+            return desc;
+        }
+
+        private string bitsToString(double[] output, int start, int end)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = start; i < end; i++)
+            {
+                sb.Append(output[i] > 0.5 ? "1" : "0");
+            }
+
+            return sb.ToString();
+        }
+
+/*
+        public double[] ClosenessScores(int[] expValues, int[] actValues, bool fractional = true)
+        {
+            // Fallback closeness is a percentage match
+            if (Encoders == null)
+            {
+                double err = Math.Abs(expValues[0] - actValues[0]);
+                if (fractional)
+                {
+                    double denom = Math.Max(expValues[0], actValues[0]);
+                    if (denom == 0)
+                    {
+                        denom = 1.0;
+                    }
+                    double closeness = 1.0 - err / denom;
+                    if (closeness < 0)
+                    {
+                        closeness = 0;
+                    }
+                    return new double[] { closeness };
+                }
+                else
+                {
+                    return new double[] { err };
+                }
+            }
+
+            var scalarIdx = 0;
+            var retVals = new double[] { };
+            foreach (var (name, encoder, offset) in Encoders)
+            {
+                var values = encoder.ClosenessScores(expValues.Skip(scalarIdx).ToArray(), actValues.Skip(scalarIdx).ToArray(), fractional);
+                scalarIdx += values.Length;
+                retVals = retVals.Concat(values).ToArray();
+            }
+
+            return retVals;
+        }
+
+        */
+/*
+        public List<EncoderResult> TopDownCompute(BitArray encoded)
+        {
+            // Fallback topdown compute
+            if (this.Encoders == null)
+            {
+                throw new InvalidOperationException("Must be implemented in sub-class");
+            }
+
+            // Concatenate the results from topDownCompute on each child encoder
+            List<EncoderResult> retVals = new List<EncoderResult>();
+            for (int i = 0; i < this.Encoders.Count; i++)
+            {
+                
+                LinkedListNode<(string name, Encoder encoder, int offset)> node = this.Encoders.First;
+                for (int j = 0; j < i; j++)
+                {
+                    node = node.Next;
+                }
+                (string name, Encoder encoder, int offset) = node.Value;
+                
+
+
+                var (name, encoder, offset) = this.encoders[i];
+
+                int nextOffset = i < this.Encoders.Count - 1 ? this.Encoders[i + 1].Offset : this.Width;
+
+                var fieldOutput = encoded.Slice(offset, nextOffset - offset);
+                var values = encoder.TopDownCompute(fieldOutput);
+
+                if (values is IEnumerable<EncoderResult>)
+                {
+                    retVals.AddRange(values);
+                }
+                else
+                {
+                    retVals.Add(values);
+                }
+            }
+
+            return retVals;
+        }
+*/
+
+        public int[] RightVecProd(int[][] matrix, int[] vector)
+        {
+            int[] result = new int[matrix.Length];
+
+            for (int i = 0; i < matrix.Length; i++)
+            {
+                int sum = 0;
+
+                for (int j = 0; j < matrix[i].Length; j++)
+                {
+                    sum += matrix[i][j] * vector[j];
+                }
+
+                result[i] = sum;
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Returns the rendered similarity matrix for the whole rage of values between min and max.
@@ -292,6 +611,8 @@ namespace NeoCortexApi.Encoders
             return sb.ToString() + results;
         }
 
+        public abstract List<T> GetBucketValues<T>();
+        
         public override bool Equals(object obj)
         {
             var encoder = obj as EncoderBase;
@@ -346,5 +667,33 @@ namespace NeoCortexApi.Encoders
         {
             return this.Equals((object)other);
         }
+        // Define the Encoders property as a dictionary of tuples
+        public Dictionary<string, (object encoder, int offset)> Encoders { get; set; }
+        public IEnumerable<double> Values { get; private set; }
+
+        public class EncoderInfo
+        {
+            internal IEncoder encoder;
+            internal int offset;
+
+            public string Name { get; internal set; }
+
+            public static implicit operator EncoderInfo((object encoder, int offset) v)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
+
+        double[] ISerializable.Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
     }
+
+    
 }
