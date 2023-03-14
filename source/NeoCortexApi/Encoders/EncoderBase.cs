@@ -305,7 +305,7 @@ namespace NeoCortexApi.Encoders
         /// <remarks>
         /// Note: The output array is reused, so clear it before updating it.
         /// </remarks>
-        public abstract double[] Encode(object inputData);
+        public abstract int[] Encode(object inputData);
         /// Convenience wrapper for :meth:`.encodeIntoArray`.
         /// This may be less efficient because it allocates a new numpy array every call. 
         /// :param inputData: input data to be encode
