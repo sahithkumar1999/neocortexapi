@@ -235,6 +235,7 @@ namespace NeoCortexApi.Encoders
         /// <param name="bucketIndex">The bucket index.</param>
         /// <returns></returns>
 
+
         public int? GetBucketIndex(decimal inputData)
         {
             if ((double)inputData < MinVal || (double)inputData > MaxVal)
