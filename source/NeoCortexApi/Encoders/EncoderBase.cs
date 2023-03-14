@@ -305,7 +305,11 @@ namespace NeoCortexApi.Encoders
         /// <remarks>
         /// Note: The output array is reused, so clear it before updating it.
         /// </remarks>
-        public abstract int[] Encode(object inputData);
+        public abstract double[] Encode(object inputData);
+        /// Convenience wrapper for :meth:`.encodeIntoArray`.
+        /// This may be less efficient because it allocates a new numpy array every call. 
+        /// :param inputData: input data to be encode
+        /// :return: a numpy array with the encoded representation of inputData
 
         /// <summary>
         /// The Encode
@@ -314,7 +318,7 @@ namespace NeoCortexApi.Encoders
         /// <returns>The <see cref="int[]"/></returns>
         //public abstract int[] Encode(object inputData);
 
-       
+
 
         /// <summary>
         /// Returns a list of items, one for each bucket defined by this encoder. Each item is the value assigned to that bucket, this is the same as the
@@ -324,7 +328,7 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         /// <typeparam name="T">class type parameter so that this method can return encoder specific value types</typeparam>
         /// <returns>list of items, each item representing the bucket value for that bucket.</returns>
-        
+
 
         /// <summary>
         /// Returns an array containing the sum of the right applied multiplications of each slice to the array passed in.
@@ -472,7 +476,7 @@ namespace NeoCortexApi.Encoders
             return sb.ToString();
         }
 
-
+/*
         public double[] ClosenessScores(int[] expValues, int[] actValues, bool fractional = true)
         {
             // Fallback closeness is a percentage match
@@ -511,9 +515,8 @@ namespace NeoCortexApi.Encoders
             return retVals;
         }
 
-
-
-
+        */
+/*
         public List<EncoderResult> TopDownCompute(BitArray encoded)
         {
             // Fallback topdown compute
@@ -526,14 +529,14 @@ namespace NeoCortexApi.Encoders
             List<EncoderResult> retVals = new List<EncoderResult>();
             for (int i = 0; i < this.Encoders.Count; i++)
             {
-                /*
+                
                 LinkedListNode<(string name, Encoder encoder, int offset)> node = this.Encoders.First;
                 for (int j = 0; j < i; j++)
                 {
                     node = node.Next;
                 }
                 (string name, Encoder encoder, int offset) = node.Value;
-                */
+                
 
 
                 var (name, encoder, offset) = this.encoders[i];
@@ -555,7 +558,7 @@ namespace NeoCortexApi.Encoders
 
             return retVals;
         }
-
+*/
 
         public int[] RightVecProd(int[][] matrix, int[] vector)
         {

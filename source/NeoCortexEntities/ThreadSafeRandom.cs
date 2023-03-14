@@ -124,5 +124,10 @@ namespace NeoCortexApi
 
             return new ThreadSafeRandom(seed, counter);
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

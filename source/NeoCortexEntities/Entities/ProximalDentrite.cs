@@ -300,6 +300,11 @@ namespace NeoCortexApi.Entities
             return proximal;
         }
 
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
     }
 }

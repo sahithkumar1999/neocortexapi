@@ -349,6 +349,11 @@ namespace NeoCortexApi.Entities
             var distal = HtmSerializer.DeserializeObject<T>(sr, name);
             return distal;
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 

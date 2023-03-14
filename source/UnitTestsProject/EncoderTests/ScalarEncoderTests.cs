@@ -21,6 +21,8 @@ namespace UnitTestsProject.EncoderTests
     [TestClass]
     public class ScalarEncoderTests
     {
+        private readonly object input;
+
         /// <summary>
         /// Initializes encoder and invokes Encode() method.
         /// </summary>

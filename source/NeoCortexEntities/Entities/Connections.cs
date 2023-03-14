@@ -1740,6 +1740,11 @@ namespace NeoCortexApi.Entities
             //conn.Cells = cells.ToArray();
             return conn;
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
     }

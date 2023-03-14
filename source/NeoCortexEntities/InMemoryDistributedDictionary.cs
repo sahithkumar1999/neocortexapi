@@ -637,5 +637,10 @@ namespace NeoCortexApi.Entities
         {
             throw new NotImplementedException();
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

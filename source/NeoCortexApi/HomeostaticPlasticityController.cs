@@ -623,6 +623,11 @@ namespace NeoCortexApi
 
             return controller;
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
         #endregion
     }
 }

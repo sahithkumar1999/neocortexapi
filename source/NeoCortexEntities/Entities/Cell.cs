@@ -298,6 +298,11 @@ namespace NeoCortexApi.Entities
             //}
             return cell;
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
         #endregion
     }
 }

@@ -544,5 +544,10 @@ namespace NeoCortexApi.Entities
         {
             return HtmSerializer.DeserializeObject<Column>(sr, name);
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

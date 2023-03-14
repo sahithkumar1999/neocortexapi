@@ -190,6 +190,11 @@ namespace NeoCortexApi.Network
         {
             throw new NotImplementedException();
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
         #region Private Methods
 
         #endregion

@@ -335,6 +335,11 @@ namespace NeoCortexApi.Types
             var list = HtmSerializer.Deserialize<List<T>>(sr, null);
             return new LinkedHashSet<T>(list);
         }
+
+        public double[] Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
     }

@@ -14,6 +14,7 @@ using System.Numerics;
 
 
 
+
 namespace NeoCortexApi.Encoders
 {
 
@@ -810,7 +811,7 @@ namespace NeoCortexApi.Encoders
         {
             throw new NotImplementedException();
         }
-
+/*
         public List<double> GetBucketValues()
         {
             // Need to re-create?
@@ -828,13 +829,13 @@ namespace NeoCortexApi.Encoders
 
             return bucketVal;
         }
-
+*/
         private int[][] GetTopDownMapping(object v)
         {
             throw new NotImplementedException();
         }
         
-
+/*
         public int getBucketInfo(object buckets)
         {
             object inputVal;
@@ -860,7 +861,7 @@ namespace NeoCortexApi.Encoders
             };
         }
 
-       
+       */
 
         private static int[] RightVecProd(int[][] matrix, int[] vector)
         {
@@ -880,7 +881,7 @@ namespace NeoCortexApi.Encoders
 
             return result;
         }
-
+/*
         public int topDownCompute(object encoded)
         {
             // Get/generate the topDown mapping table
@@ -894,7 +895,7 @@ namespace NeoCortexApi.Encoders
                     category
             });
         }
-
+*/
         public virtual object closenessScores(double[] expValues, double[] actValues, object fractional = null)
         {
             object closeness;
@@ -993,6 +994,11 @@ namespace NeoCortexApi.Encoders
        
 
         public override void EncodeIntoArray(object inputData, double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal int? GetBucketIndex(decimal i, object input)
         {
             throw new NotImplementedException();
         }

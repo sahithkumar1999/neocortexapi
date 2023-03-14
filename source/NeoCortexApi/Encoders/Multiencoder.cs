@@ -47,6 +47,11 @@ namespace NeoCortexApi.Encoders
             throw new NotImplementedException();
         }
 
+        public override void EncodeIntoArray(object inputData, double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
         public override int Width
         {
             get
