@@ -144,6 +144,14 @@ namespace NeoCortexApi.Encoders
             }
         }
 
+        public object retVal
+        {
+            get { return (int[])this["retVal"]; }
+            set { this["retVal"] = value; }
+        }
+
+
+
 
         public int numBuckets { get => (int)this["numBuckets"]; set => this["numBuckets"] = value; }
         public double[][] mappingM;
@@ -264,6 +272,25 @@ namespace NeoCortexApi.Encoders
         public abstract int Width { get; }
 
 
+
+
+        public struct EncoderResult
+        {
+            public object Value { get; }
+            public object Scalar { get; }
+            public object Encoding { get; }
+
+            public EncoderResult(object value, object scalar, object encoding)
+            {
+                Value = value;
+                Scalar = scalar;
+                Encoding = encoding;
+            }
+        }
+
+        
+
+
         /// <summary>
         /// Returns true if the underlying encoder works on deltas
         /// </summary>
@@ -318,10 +345,10 @@ namespace NeoCortexApi.Encoders
             }
             return retVal;
         }
-        public class EncoderResult
+        /*public class EncoderResult
         {
             // TODO: Define the `EncoderResult` class
-        }
+        }*/
 
         public List<EncoderResult> GetBucketInfo(List<int> buckets)
         {
@@ -472,12 +499,82 @@ namespace NeoCortexApi.Encoders
                 }
             }
 
-           
+            var scalarIdx = 0;
+            var retVals = new double[] { };
+            foreach (var (name, encoder, offset) in Encoders)
+            {
+                var values = encoder.ClosenessScores(expValues.Skip(scalarIdx).ToArray(), actValues.Skip(scalarIdx).ToArray(), fractional);
+                scalarIdx += values.Length;
+                retVals = retVals.Concat(values).ToArray();
+            }
 
-            return retVals.ToArray();
+            return retVals;
         }
 
 
+
+
+        public List<EncoderResult> TopDownCompute(BitArray encoded)
+        {
+            // Fallback topdown compute
+            if (this.Encoders == null)
+            {
+                throw new InvalidOperationException("Must be implemented in sub-class");
+            }
+
+            // Concatenate the results from topDownCompute on each child encoder
+            List<EncoderResult> retVals = new List<EncoderResult>();
+            for (int i = 0; i < this.Encoders.Count; i++)
+            {
+                /*
+                LinkedListNode<(string name, Encoder encoder, int offset)> node = this.Encoders.First;
+                for (int j = 0; j < i; j++)
+                {
+                    node = node.Next;
+                }
+                (string name, Encoder encoder, int offset) = node.Value;
+                */
+
+
+                var (name, encoder, offset) = this.encoders[i];
+
+                int nextOffset = i < this.Encoders.Count - 1 ? this.Encoders[i + 1].Offset : this.Width;
+
+                var fieldOutput = encoded.Slice(offset, nextOffset - offset);
+                var values = encoder.TopDownCompute(fieldOutput);
+
+                if (values is IEnumerable<EncoderResult>)
+                {
+                    retVals.AddRange(values);
+                }
+                else
+                {
+                    retVals.Add(values);
+                }
+            }
+
+            return retVals;
+        }
+
+
+        public int[] RightVecProd(int[][] matrix, int[] vector)
+        {
+            int[] result = new int[matrix.Length];
+
+            for (int i = 0; i < matrix.Length; i++)
+            {
+                int sum = 0;
+
+                for (int j = 0; j < matrix[i].Length; j++)
+                {
+                    sum += matrix[i][j] * vector[j];
+                }
+
+                result[i] = sum;
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Returns the rendered similarity matrix for the whole rage of values between min and max.
@@ -585,6 +682,11 @@ namespace NeoCortexApi.Encoders
         }
 
         public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
+
+        double[] ISerializable.Encode(object inputData)
         {
             throw new NotImplementedException();
         }
