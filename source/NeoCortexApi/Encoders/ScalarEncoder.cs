@@ -1119,3 +1119,5 @@ namespace NeoCortexApi.Encoders
         }
     }
 }
+
+
