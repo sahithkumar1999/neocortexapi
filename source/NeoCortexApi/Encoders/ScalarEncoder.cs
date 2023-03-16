@@ -308,7 +308,7 @@ namespace NeoCortexApi.Encoders
         /// <param name="inputData">The data to be encoded. Must be of type double.</param>
         /// <param name="bucketIndex">The bucket index.</param>
         /// <returns></returns>
-       /* public int? GetBucketIndex(object inputData)
+       public int? GetBucketIndex(object inputData)
         {
             double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
 
@@ -340,7 +340,7 @@ namespace NeoCortexApi.Encoders
             //}
             //return 0;
         }
-       */
+       
 
         /// <summary>
         /// Encodes the given scalar value as SDR as defined by HTM.
