@@ -509,19 +509,6 @@ namespace NeoCortexApi.Encoders
 
         public int Decode(object encoded, string parentFieldName = "")
         {
-            (int[], (Dictionary<string, object>, List<object>)) Encode(int input)
-            {
-                double[] encodedArray = EncodeIntoArray(input);
-                /// For now, we simply assume any top-down output greater than 0
-                /// is ON. Eventually, we will probably want to incorporate the strength
-                /// of each top-down output.
-                tmpOutput = encodedArray.Take(N).Select(x => Convert.ToInt32(x > 0)).ToArray();
-                if (!tmpOutput.Any())
-                {
-                    return (new int[0], (new Dictionary<string, object>(), new List<object>()));
-                }
-
-                }
 
 
 
@@ -758,7 +745,7 @@ namespace NeoCortexApi.Encoders
 
 
 
-        public object Get_topDownValues()
+        public object GetTopDownValues()
         {
             return _topDownValues;
         }
