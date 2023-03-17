@@ -5,6 +5,7 @@ using NeoCortexApi.Utility;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace NeoCortexApi.Encoders
@@ -145,6 +146,21 @@ namespace NeoCortexApi.Encoders
         /// </summary>
 
         public int N { get => (int)this["N"]; set => this["N"] = (int)value; }
+        
+        public int Verbosity { get => (int)this["Verbosity"]; set => this["Verbosity"] = (int)value; }
+        
+        public int startIdx { get => (int)this["startIdx"]; set => this["startIdx"] = (int)value; }
+        public int runLength { get => (int)this["runLength"]; set => this["runLength"] = (int)value; }
+        public bool [] tmpOutput { get => (bool[])this["tmpOutput"]; set => this["tmpOutput"] = (bool[])value; }
+
+        
+        public double run { get => (double)this["run"]; set => this["run"] = (double)value; }
+        /// <summary>
+        /// public double nz { get => (double)this["nz"]; set => this["nz"] = (double)value; }
+        /// </summary>
+        public double runs { get => (double)this["runs"]; set => this["runs"] = (double)value; }
+
+
 
         public int NInternal { get => (int)this["NInternal"]; set => this["NInternal"] = (int)value; }
 
@@ -346,5 +362,10 @@ namespace NeoCortexApi.Encoders
         {
             return this.Equals((object)other);
         }
+
+        
+
+
+
     }
 }

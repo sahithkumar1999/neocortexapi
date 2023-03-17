@@ -299,14 +299,44 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
+        [TestMethod]
+        
+        public void TestGenerateRangeDescription()
+        {
+            var encoder = new ScalarEncoder(10, 0, 100, true);
+
+            var ranges1 = new List<Tuple<double, double>>()
+    {
+        Tuple.Create(1.0, 3.0),
+        Tuple.Create(7.0, 10.0)
+    };
+
+            Assert.AreEqual("1.00-3.00, 7.00-10.00", encoder.GenerateRangeDescription(ranges1));
+
+            var ranges2 = new List<Tuple<double, double>>()
+    {
+        Tuple.Create(2.5, 2.5)
+    };
+
+            Assert.AreEqual("2.50", encoder.GenerateRangeDescription(ranges2));
+
+            var ranges3 = new List<Tuple<double, double>>()
+    {
+        Tuple.Create(1.0, 1.0),
+        Tuple.Create(5.0, 6.0)
+    };
+
+            Assert.AreEqual("1.00, 5.00-6.00", encoder.GenerateRangeDescription(ranges3));
+        }
 
 
 
-            /// <summary>
-            /// The DecodeTest
-            /// </summary>
-            /// <param name="input">The input<see cref="int"/></param>
-            public void DecodeTest(int input)
+
+        /// <summary>
+        /// The DecodeTest
+        /// </summary>
+        /// <param name="input">The input<see cref="int"/></param>
+        public void DecodeTest(int input)
         {
         }
 

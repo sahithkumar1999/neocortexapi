@@ -19,6 +19,11 @@ namespace NeoCortexApi.Encoders
     /// </summary>
     public class ScalarEncoder : EncoderBase
     {
+        private int v1;
+        private int v2;
+        private int v3;
+        private bool v4;
+
         /// <summary>
         /// Gets a value indicating whether IsDelta
         /// </summary>
@@ -43,6 +48,14 @@ namespace NeoCortexApi.Encoders
         public ScalarEncoder(Dictionary<string, object> encoderSettings)
         {
             this.Initialize(encoderSettings);
+        }
+
+        public ScalarEncoder(int v1, int v2, int v3, bool v4)
+        {
+            this.v1 = v1;
+            this.v2 = v2;
+            this.v3 = v3;
+            this.v4 = v4;
         }
 
         /// <summary>
@@ -280,193 +293,31 @@ namespace NeoCortexApi.Encoders
 
         }
 
-
-        public (Dictionary<string, (List<double[]>, string)>, List<string>) Decode(double[] encoded, string parentFieldName = "")
+        public string GenerateRangeDescription(List<Tuple<double, double>> ranges)
         {
-            // For now, we simply assume any top-down output greater than 0
-            // is ON. Eventually, we will probably want to incorporate the strength
-            // of each top-down output.
-            var tmpOutput = encoded.Take(N).Select(x => x > 0).ToArray();
-            if (!tmpOutput.Any())
+            var desc = "";
+            var numRanges = ranges.Count;
+            for (var i = 0; i < numRanges; i++)
             {
-                return (new Dictionary<string, (List<double[]>, string)>(), new List<string>());
-            }
-
-            // ------------------------------------------------------------------------
-            // First, assume the input pool is not sampled 100%, and fill in the
-            // "holes" in the encoded representation (which are likely to be present
-            // if this is a coincidence that was learned by the SP).
-
-            // Search for portions of the output that have "holes"
-            var maxZerosInARow = HalfWidth;
-            for (var i = 0; i < maxZerosInARow; i++)
-            {
-                var searchStr = new double[i + 3];
-                searchStr[0] = 1;
-                searchStr[^1] = 1;
-                for (var j = 1; j < i + 2; j++)
+                if (ranges[i].Item1 != ranges[i].Item2)
                 {
-                    searchStr[j] = 0;
-                }
-                var subLen = searchStr.Length;
-
-                // Does this search string appear in the output?
-                if (Periodic)
-                {
-                    for (var j = 0; j < N; j++)
-                    {
-                        var outputIndices = Enumerable.Range(j, subLen).Select(k => k % N).ToArray();
-                        if (searchStr.SequenceEqual(outputIndices.Select(k => Convert.ToBoolean(tmpOutput[k]))))
-                        {
-                            foreach (var index in outputIndices)
-                            {
-                                tmpOutput[index] = 1;
-                            }
-                        }
-
-
-                    }
+                    desc += $"{ranges[i].Item1:F2}-{ranges[i].Item2:F2}";
                 }
                 else
                 {
-                    for (var j = 0; j < N - subLen + 1; j++)
-                    {
-                        if (searchStr.SequenceEqual(tmpOutput.Skip(j).Take(subLen)))
-                        {
-                            for (var k = j; k < j + subLen; k++)
-                            {
-                                tmpOutput[k] = true;
-                            }
-                        }
-                    }
+                    desc += $"{ranges[i].Item1:F2}";
+                }
+
+                if (i < numRanges - 1)
+                {
+                    desc += ", ";
                 }
             }
 
-            if (Verbosity >= 2)
-            {
-                Console.WriteLine($"raw output: {string.Join(", ", encoded.Take(N))}");
-                Console.WriteLine($"filtered output: {string.Join(", ", tmpOutput)}");
-            }
-
-            // ------------------------------------------------------------------------
-            // Find each run of 1's.
-            var nz = tmpOutput.Select((x, i) => new { Value = x, Index = i }).Where(x => x.Value).Select(x => x.Index).ToArray();
-            var runs = new List<(int startIdx, int runLength)>(); // will be tuples of (startIdx, runLength)
-            var run = (nz[0], 1);
-            for (var i = 1; i < nz.Length; i++)
-            {
-                if (nz[i] == run.startIdx + run.runLength)
-                {
-                    run.runLength++;
-                }
-                else
-                {
-                    runs.Add(run);
-                    run = (nz[i], 1);
-                }
-            }
-            runs.Add(run);
-
-            // If we have a periodic encoder, merge the first and last run if they
-            // both go all the way to the edges
-            if (Periodic && runs.Count > 1)
-            {
-                if (runs[0].Item1 == 0 && runs[^1].Item1 + runs[^1].Item2 == N)
-                {
-                    runs[^1].Item2 += runs[0].Item2;
-                    runs.RemoveAt(0);
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // Now, for each group of 1's, determine the "left" and "right" edges, where
-            // the "left" edge is inset by halfwidth and the "right" edge is inset by
-            // halfwidth.
-            // For a group of width w or less, the "left" and "right" edge are both at
-            // the center position of the group.
-            List<Tuple<double, double>> ranges = new List<Tuple<double, double>>();
-            foreach (var run in runs)
-            {
-                var (start, runLen) = run;
-                double left, right;
-                if (runLen <= W)
-                {
-                    left = right = start + runLen / 2.0;
-                }
-                else
-                {
-                    left = start + HalfWidth;
-                    right = start + runLen - 1 - HalfWidth;
-                }
-                // Convert to input space.
-                double inMin, inMax;
-                if (!Periodic)
-                {
-                    inMin = (left - Padding) * Resolution + MinVal;
-                    inMax = (right - Padding) * Resolution + MinVal;
-                }
-                else
-                {
-                    inMin = (left - Padding) * Range / nInternal + MinVal;
-                    inMax = (right - Padding) * Range / nInternal + MinVal;
-                }
-
-                // Handle wrap-around if periodic
-                if (Periodic)
-                {
-                    if (inMin >= MaxVal)
-                    {
-                        inMin -= Range;
-                        inMax -= Range;
-                    }
-                }
-
-                // Clip low end
-                if (inMin < MinVal)
-                {
-                    inMin = MinVal;
-                }
-                if (inMax < MinVal)
-                {   
-                    inMax = MinVal;
-                }
-
-                // If we have a periodic encoder, and the max is past the edge, break into
-                // 2 separate ranges
-                if (Periodic && inMax >= MaxVal)
-                {
-                    ranges.Add(new Tuple<double, double>(inMin, MaxVal));
-                    ranges.Add(new Tuple<double, double>(MinVal, inMax - Range));
-                }
-                else
-                {
-                    if (inMax > MaxVal)
-                    {
-                        inMax = MaxVal;
-                    }
-                    if (inMin > MaxVal)
-                    {
-                        inMin = MaxVal;
-                    }
-                    ranges.Add(new Tuple<double, double>(inMin, inMax));
-                }
-            }
-
-            var desc = GenerateRangeDescription(ranges);
-            // Return result
-            if (!string.IsNullOrEmpty(parentFieldName))
-            {
-                fieldName = $"{parentFieldName}.{Name}";
-            }
-            else
-            {
-                fieldName = Name;
-            }
-            return (new Dictionary<string, Tuple<List<Tuple<double, double>>, string>>()
-            {
-            { fieldName, new Tuple<List<Tuple<double, double>>, string>(ranges, desc) }
-            }, new List<string> { fieldName });
+            return desc;
         }
+
+
 
 
         /*
@@ -484,11 +335,11 @@ namespace NeoCortexApi.Encoders
                 }
                */
 
-            /// <summary>
-            /// The Encode
-            /// </summary>
-            /// <param name="inputData">The inputData<see cref="object"/></param>
-            /// <returns>The <see cref="int[]"/></returns>
+        /// <summary>
+        /// The Encode
+        /// </summary>
+        /// <param name="inputData">The inputData<see cref="object"/></param>
+        /// <returns>The <see cref="int[]"/></returns>
         public override int[] Encode(object inputData)
         {
             int[] output = null;
@@ -559,6 +410,10 @@ namespace NeoCortexApi.Encoders
         {
             throw new NotImplementedException();
         }
+
+       
+
+
 
         //public static object Deserialize<T>(StreamReader sr, string name)
         //{
