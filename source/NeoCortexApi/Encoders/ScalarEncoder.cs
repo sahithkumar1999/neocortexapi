@@ -140,8 +140,10 @@ namespace NeoCortexApi.Encoders
 
         public void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
         {
+           /// """ (helper function)  There are three different ways of thinking about the representation. Handle each case here."""
             if (n != 0)
             {
+                //"Only one of n/radius/resolution can be specified for a ScalarEncoder"
                 if (double.NaN != minVal && double.NaN != maxVal)
                 {
                     if (!Periodic)
@@ -235,6 +237,8 @@ namespace NeoCortexApi.Encoders
         /// <exception cref="ArgumentException"></exception>
         protected int? GetFirstOnBit(double input)
         {
+                //Return the bit offset of the first bit to be set in the encoder output.
+                //For periodic encoders, this can be a negative number when the encoded output wraps around. 
             if (input == double.NaN)
             {
                 return null;
@@ -260,6 +264,7 @@ namespace NeoCortexApi.Encoders
 
             if (this.Periodic)
             {
+                //For periodic encoders, the bucket index is the index of the center bit
                 if (input >= this.MaxVal)
                 {
                     throw new ArgumentException($"Input ({input}) greater than periodic range ({MinVal} - {MaxVal}");
@@ -424,10 +429,11 @@ namespace NeoCortexApi.Encoders
             {
                 return output;
             }
-
+            //Get the bucket index to use
             int? bucketVal = GetFirstOnBit(input);
             if (bucketVal != null)
             {
+                //None is returned for missing value
                 output = new int[N];
 
                 int bucketIdx = bucketVal.Value;
@@ -1089,7 +1095,7 @@ namespace NeoCortexApi.Encoders
 
     }
 
-    internal class BucketInfo
+    internal class Buc ketInfo
     {
         public double Value { get; internal set; }
     }

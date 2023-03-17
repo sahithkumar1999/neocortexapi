@@ -439,6 +439,7 @@ namespace NeoCortexApi.Encoders
 
         public static string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
         {
+            //Return a pretty print string representing the return value from method Decode
             var fieldsDict = decodeResults.Item1;
             var fieldsOrder = decodeResults.Item2;
             var desc = "";
