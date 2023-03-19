@@ -295,6 +295,7 @@ namespace NeoCortexApi.Encoders
         /// Returns true if the underlying encoder works on deltas
         /// </summary>
         public abstract bool IsDelta { get; }
+        public object Encoders { get; private set; }
         #endregion
 
         /// <summary>
@@ -664,16 +665,51 @@ namespace NeoCortexApi.Encoders
         {
             return this.Equals((object)other);
         }
-        // Define the Encoders property as a dictionary of tuples
-        public Dictionary<string, (object encoder, int offset)> Encoders { get; set; }
-        public IEnumerable<double> Values { get; private set; }
-
-        public class EncoderInfo
+        public double[] ClosenessScores(double[] expValues1, double[] actValues1)
         {
-            internal IEncoder encoder;
-            internal int offset;
+            throw new NotImplementedException();
+        }
+        public double[] ClosenessScores(double[] expValues2, double[] actValues2, bool v)
+        {
+            throw new NotImplementedException();
+        }
 
-            public string Name { get; internal set; }
+        public static double[] ClosenessScores(double[] expValues, double[] actValues, Encoder encoder, bool fractional = true)
+        {
+            if (encoder != null)
+            {
+                double expValue = expValues[0];
+                double actValue = actValues[0];
+                double err = Math.Abs(expValue - actValue);
+                double closeness;
+
+                if (fractional)
+                {
+                    double denom = Math.Max(expValue, actValue);
+                    if (denom == 0)
+                    {
+                        denom = 1.0;
+                    }
+                    closeness = 1.0 - err / denom;
+                    if (closeness < 0)
+                    {
+                        closeness = 0;
+                    }
+                }
+                else
+                {
+                    closeness = err;
+                }
+
+                return new double[] { closeness };
+            }
+            // Multi-encoder
+            // Implementation of closeness scores for multi-encoders goes here
+            // ...
+
+            return null;
+        }
+
 
             public static implicit operator EncoderInfo((object encoder, int offset) v)
             {

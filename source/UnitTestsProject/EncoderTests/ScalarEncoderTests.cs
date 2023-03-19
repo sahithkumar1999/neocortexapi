@@ -381,6 +381,43 @@ namespace UnitTestsProject.EncoderTests
 
             return encoderSettings;
         }
+
+        [TestMethod]
+        public void TestClosenessScores()
+        {
+            // Test case 1 - fractional closeness score
+            double[] expValues1 = { 10 };
+            double[] actValues1 = { 5 };
+            double[] expectedOutput1 = { 0.5 };
+            double[] actualOutput1 = ClosenessScores(expValues1, actValues1);
+            CollectionAssert.AreEqual(expectedOutput1, actualOutput1);
+
+            // Test case 2 - non-fractional closeness score
+            double[] expValues2 = { 5 };
+            double[] actValues2 = { 3 };
+            double[] expectedOutput2 = { 2 };
+            double[] actualOutput2 = TestClosenessScores(expValues2, actValues2, false);
+            CollectionAssert.AreEqual(expectedOutput2, actualOutput2);
+
+            // Test case 3 - periodic, fractional closeness score
+            double[] expValues3 = { 350 };
+            double[] actValues3 = { 10 };
+            double[] expectedOutput3 = { 0.02777777777777779 };
+            double[] actualOutput3 = ClosenessScores(expValues3, actValues3);
+            CollectionAssert.AreEqual(expectedOutput3, actualOutput3);
+
+            // Test case 4 - periodic, non-fractional closeness score
+            double[] expValues4 = { 300 };
+            double[] actValues4 = { 400 };
+            double[] expectedOutput4 = { 100 };
+            double[] actualOutput4 = TestClosenessScores(expValues4, actValues4, false);
+            CollectionAssert.AreEqual(expectedOutput4, actualOutput4);
+        }
+
+        private double[] ClosenessScores(double[] expValues1, double[] actValues1)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 

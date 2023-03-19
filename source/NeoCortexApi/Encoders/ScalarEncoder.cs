@@ -997,6 +997,35 @@ namespace NeoCortexApi.Encoders
             throw new NotImplementedException();
         }
 
+        public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
+        {
+            double expValue = expValues[0];
+            double actValue = actValues[0];
+            if (Periodic)
+            {
+                expValue = expValue % MaxVal;
+                actValue = actValue % MaxVal;
+            }
+
+            double err = Math.Abs(expValue - actValue);
+            if (Periodic)
+            {
+                err = Math.Min(err, MaxVal - err);
+            }
+            double closeness;
+            if (fractional)
+            {
+                double pctErr = err / (MaxVal - MinVal);
+                pctErr = Math.Min(1.0, pctErr);
+                closeness = 1.0 - pctErr;
+            }
+            else
+            {
+                closeness = err;
+            }
+
+            return new double[] { closeness };
+        }
 
 
 
