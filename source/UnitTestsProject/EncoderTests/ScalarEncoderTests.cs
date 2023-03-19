@@ -177,15 +177,15 @@ namespace UnitTestsProject.EncoderTests
 
             //Assert.IsTrue(expectedResult.SequenceEqual(result));
         }
-
+        
         /// <summary>
         /// Encodes a set of numbers and produces bitmap output.
         /// </summary>
         [TestMethod]
         [TestCategory("Experiment")]
-        public void ScalarEncodingExperiment()
+        public void ScalarEncodingGetBucketIndexNonPeriodic()
         {
-            string outFolder = nameof(ScalarEncodingExperiment);
+            string outFolder = nameof(ScalarEncodingGetBucketIndexNonPeriodic);
 
             Directory.CreateDirectory(outFolder);
 
@@ -202,13 +202,95 @@ namespace UnitTestsProject.EncoderTests
                 { "Name", "scalar"},
                 { "ClipInput", false},
             });
+           
+            for (decimal i = 0.0M; i < (long)encoder.MaxVal; i += 0.1M)
+            {
+                var result = encoder.Encode(i);
+
+                int? bucketIndex = encoder.GetBucketIndex(i);
+
+                int[,] twoDimenArray = ArrayUtils.Make2DArray<int>(result, (int)Math.Sqrt(result.Length), (int)Math.Sqrt(result.Length));
+                var twoDimArray = ArrayUtils.Transpose(twoDimenArray);
+
+                NeoCortexUtils.DrawBitmap(twoDimArray, 1024, 1024, $"{outFolder}\\{i}.png", Color.Gray, Color.Green, text: $"v:{i} /b:{bucketIndex}");
+            }
+ /*           
+            // Test case 1: Test GetBucketIndex method with a value below the minimum value
+            decimal value1 = -1;
+            int? expectedIndex1 = null;
+            int? actualIndex1 = encoder.GetBucketIndex(value1);
+            Assert.AreEqual(expectedIndex1, actualIndex1);
+
+            // Test case 2: Test GetBucketIndex method with a value above the maximum value
+            decimal value2 = 101;
+            int? expectedIndex2 = null;
+            int? actualIndex2 = encoder.GetBucketIndex(value2);
+            Assert.AreEqual(expectedIndex2, actualIndex2);
+
+            // Test case 3: Test GetBucketIndex method with a value that is not part of any bucket
+            decimal value3 = 25.7M;
+            int? expectedIndex3 = null;
+            int? actualIndex3 = encoder.GetBucketIndex(value3);
+            Assert.AreEqual(expectedIndex3, actualIndex3);
+
+
+            // Test case 4: Test GetBucketIndex method with a value that is part of a bucket
+            decimal value4 = 70.8M;
+            int? expectedIndex4 = 14;
+            int? actualIndex4 = encoder.GetBucketIndex(value4);
+            Assert.AreEqual(expectedIndex4, actualIndex4);
+
+
+
+            // Test case 5: Test GetBucketIndex method with a value that is equal to the minimum value
+            decimal value5 = 0;
+            int? expectedIndex5 = 0;
+            int? actualIndex5 = encoder.GetBucketIndex(value5);
+            Assert.AreEqual(expectedIndex5, actualIndex5);
+
+            // Test case 6: Test GetBucketIndex method with a value that is equal to the maximum value
+            decimal value6 = 100;
+            int? expectedIndex6 = 20;
+            int? actualIndex6 = encoder.GetBucketIndex(value6);
+            Assert.AreEqual(expectedIndex6, actualIndex6);
+
+
+            // Test case 7: Test GetBucketIndex method with a value that is equal to the center of a bucket
+            decimal value7 = 50;
+            int? expectedIndex7 = 10;
+            int? actualIndex7 = encoder.GetBucketIndex(value7);
+            Assert.AreEqual(expectedIndex7, actualIndex7);
+*/
+
+        }
+
+        [TestMethod]
+        [TestCategory("Experiment")]
+        public void ScalarEncodingGetBucketIndexPeriodic()
+        {
+            string outFolder = nameof(ScalarEncodingGetBucketIndexPeriodic);
+
+            Directory.CreateDirectory(outFolder);
+
+            DateTime now = DateTime.Now;
+
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", true},
+                { "Name", "scalar_periodic"},
+                { "ClipInput", false},
+            });
 
             for (decimal i = 0.0M; i < (long)encoder.MaxVal; i += 0.1M)
             {
                 var result = encoder.Encode(i);
 
-                int? bucketIndex = encoder.GetBucketIndex(i, input);
-                
+
                 int[,] twoDimenArray = ArrayUtils.Make2DArray<int>(result, (int)Math.Sqrt(result.Length), (int)Math.Sqrt(result.Length));
                 var twoDimArray = ArrayUtils.Transpose(twoDimenArray);
 
@@ -216,11 +298,15 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
-        /// <summary>
-        /// The DecodeTest
-        /// </summary>
-        /// <param name="input">The input<see cref="int"/></param>
-        public void DecodeTest(int input)
+
+
+
+
+            /// <summary>
+            /// The DecodeTest
+            /// </summary>
+            /// <param name="input">The input<see cref="int"/></param>
+            public void DecodeTest(int input)
         {
         }
 
