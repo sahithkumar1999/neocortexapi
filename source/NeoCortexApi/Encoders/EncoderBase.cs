@@ -3,6 +3,7 @@
 using NeoCortexApi.Entities;
 using NeoCortexApi.Utility;
 using NeoCortexEntities.NeuroVisualizer;
+using NumSharp.Utilities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -511,6 +512,14 @@ namespace NeoCortexApi.Encoders
             /// This method returns one closeness score for each value in expValues (or
             /// actValues which must be the same length). The closeness score ranges from
             /// 0 to 1.0, 1.0 being a perfect match and 0 being the worst possible match.
+
+            ///If this encoder is a simple, single field encoder, then it will expect
+            ///just 1 item in each of the ``expValues`` and ``actValues`` arrays.
+            ///Multi - encoders will expect 1 item per sub - encoder.
+
+            ///Each encoder type can define it's own metric for closeness. For example,
+            ///a category encoder may return either 1 or 0, if the scalar matches exactly
+            ///or not.A scalar encoder might return a percentage match, etc.
 
             // Fallback closeness is a percentage match
             if (Encoders == null)
