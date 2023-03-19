@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Reflection.Emit;
 using System.Runtime.ConstrainedExecution;
+using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 using static Numpy.np;
@@ -571,6 +572,22 @@ namespace NeoCortexApi.Encoders
 
         public List<EncoderResult> TopDownCompute(BitArray encoded)
         {
+
+
+            ///Returns a list of :class:`.EncoderResult` namedtuples describing the
+            ///top - down best guess inputs for each sub-field given the encoded output.
+        
+            ///These are the values which are most likely to generate the given encoded
+        
+            ///output.To get the associated field names for each of the values, call
+            /// :meth:`.getScalarNames`.
+
+            ///    :param encoded: The encoded output.Typically received from the topDown
+            ///        outputs
+            ///                                              from the spatial pooler just above us.
+        
+            /// :return: A list of:class:`.EncoderResult`
+
             // Fallback topdown compute
             if (this.Encoders == null)
             {
