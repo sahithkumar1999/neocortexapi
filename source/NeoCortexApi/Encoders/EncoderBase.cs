@@ -427,6 +427,16 @@ namespace NeoCortexApi.Encoders
             throw new NotImplementedException("GetDescription must be implemented by all subclasses");
         }
 
+
+
+        /// <summary>
+        ///     Pretty-print a header that labels the sub-fields of the encoded
+        ///         output. This can be used in conjuction with :meth:`.pprint`.
+        ///      :param prefix: printed before the header if specified   
+        /// </summary>
+        /// <param name="output"></param>
+        /// <param name="prefix"></param>
+
         public void PPrint(double[] output, string prefix = "")
         {
             Console.Write(prefix);
