@@ -10,6 +10,8 @@ using System.Diagnostics;
 using System.Linq;
 
 
+
+
 namespace NeoCortexApiSample
 {
     /// <summary>
