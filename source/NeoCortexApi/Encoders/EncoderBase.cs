@@ -404,12 +404,20 @@ namespace NeoCortexApi.Encoders
 
         private Type defaultDtype = typeof(double);
 
-       
 
+        /// <summary>
+        ///     Encodes inputData and puts the encoded value into the numpy output array,
+        ///         which is a 1-D array of length returned by :meth:`.getWidth`.
+        /// 
+        /// 
+        /// 
+        /// </summary>
+        /// <param name="inputData"></param>
+        /// <param name="output"></param>
+        /// <exception cref="NotImplementedException"></exception>
         public void EncodeIntoArray(object inputData, Array output)
         {
-            // Encodes inputData and puts the encoded value into the output array, which is a 1-D array of length returned by GetWidth().
-            // .. note:: The output array is reused, so clear it before updating it.
+            
             throw new NotImplementedException();
         }
 
