@@ -1190,6 +1190,7 @@ internal struct NewStruct1
     {
         return new NewStruct1(value.Item1, value.Item2);
     }
+    ///
 }
 
 
