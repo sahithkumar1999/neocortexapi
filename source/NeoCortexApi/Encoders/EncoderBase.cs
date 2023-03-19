@@ -2,14 +2,17 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 using NeoCortexApi.Entities;
 using NeoCortexApi.Utility;
+using NeoCortexEntities.NeuroVisualizer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reflection.Emit;
 using System.Text;
 using System.Xml.Linq;
+using static Numpy.np;
 using static System.Net.WebRequestMethods;
 
 namespace NeoCortexApi.Encoders
@@ -459,6 +462,10 @@ namespace NeoCortexApi.Encoders
 
         public static string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
         {
+            ///    Return a pretty print string representing the return value from
+            ///        :meth:`.decode`.
+
+
             var fieldsDict = decodeResults.Item1;
             var fieldsOrder = decodeResults.Item2;
             var desc = "";
@@ -496,6 +503,15 @@ namespace NeoCortexApi.Encoders
 
         public double[] ClosenessScores(int[] expValues, int[] actValues, bool fractional = true)
         {
+            /// Compute closeness scores between the expected scalar value(s) and actual
+            /// scalar value(s). The expected scalar values are typically those obtained
+            /// from the :meth:`.getScalars` method.The actual scalar values are typically
+            /// those returned from: meth:`.topDownCompute`.
+
+            /// This method returns one closeness score for each value in expValues (or
+            /// actValues which must be the same length). The closeness score ranges from
+            /// 0 to 1.0, 1.0 being a perfect match and 0 being the worst possible match.
+
             // Fallback closeness is a percentage match
             if (Encoders == null)
             {
