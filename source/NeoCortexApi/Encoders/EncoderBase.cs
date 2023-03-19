@@ -407,8 +407,12 @@ namespace NeoCortexApi.Encoders
 
         public void EncodeIntoArray(object inputData, Array output)
         {
-            // Encodes inputData and puts the encoded value into the output array, which is a 1-D array of length returned by GetWidth().
-            // .. note:: The output array is reused, so clear it before updating it.
+            //Encodes inputData and puts the encoded value into the numpy output array,
+            // which is a 1 - D array of length returned by: meth:`.getWidth`.
+            //..note::The numpy output array is reused, so clear it before updating it.
+            //param inputData: Data to encode.This should be validated by the encoder.
+            //param output: numpy 1 - D array of same length returned by
+           :meth:`.getWidth`.
             throw new NotImplementedException();
         }
 
@@ -439,6 +443,7 @@ namespace NeoCortexApi.Encoders
 
         public static string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
         {
+            //Return a pretty print string representing the return value from method Decode
             var fieldsDict = decodeResults.Item1;
             var fieldsOrder = decodeResults.Item2;
             var desc = "";
