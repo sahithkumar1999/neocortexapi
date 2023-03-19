@@ -140,7 +140,7 @@ namespace NeoCortexApi.Encoders
 
         public void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
         {
-           /// """ (helper function)  There are three different ways of thinking about the representation. Handle each case here."""
+            /// """ (helper function)  There are three different ways of thinking about the representation. Handle each case here."""
             if (n != 0)
             {
                 //"Only one of n/radius/resolution can be specified for a ScalarEncoder"
@@ -237,8 +237,8 @@ namespace NeoCortexApi.Encoders
         /// <exception cref="ArgumentException"></exception>
         protected int? GetFirstOnBit(double input)
         {
-                //Return the bit offset of the first bit to be set in the encoder output.
-                //For periodic encoders, this can be a negative number when the encoded output wraps around. 
+            //Return the bit offset of the first bit to be set in the encoder output.
+            //For periodic encoders, this can be a negative number when the encoded output wraps around. 
             if (input == double.NaN)
             {
                 return null;
@@ -312,7 +312,7 @@ namespace NeoCortexApi.Encoders
         /// <param name="inputData">The data to be encoded. Must be of type double.</param>
         /// <param name="bucketIndex">The bucket index.</param>
         /// <returns></returns>
-       public int? GetBucketIndex(object inputData)
+        public int? GetBucketIndex(object inputData)
         {
             double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
 
@@ -327,14 +327,14 @@ namespace NeoCortexApi.Encoders
             int? bucketVal = GetFirstOnBit(input);
 
             return bucketVal;
-             For periodic encoders, the bucket index is the index of the center bit
-            if (this.Periodic)
+            For periodic encoders, the bucket index is the index of the center bit
+             if (this.Periodic)
             {
                 bucketVal = minbin + this.HalfWidth;
                 if (bucketVal < 0)
                 {
                     bucketVal += this.N;
-              }
+                }
                 else
                 {
                     /// for non-periodic encoders, the bucket index is the index of the left bit
@@ -344,7 +344,7 @@ namespace NeoCortexApi.Encoders
             }
             return 0;
         }
-       
+
 
 
         /// <summary>
@@ -408,9 +408,7 @@ namespace NeoCortexApi.Encoders
                     {
                         return null;
                     }
-
                     int? bucketVal = GetFirstOnBit(input);
-
                     return bucketVal;
                 }
                */
@@ -463,7 +461,7 @@ namespace NeoCortexApi.Encoders
             // Output 1-D array of same length resulted in parameter N    
             return output;
         }
-            
+
 
 
         /// <summary>
@@ -501,7 +499,7 @@ namespace NeoCortexApi.Encoders
             }
             bucketVal = (int)GetFirstOnBit(input);
 
-          
+
 
             minbin = this.GetFirstOnBit(input) ?? 0;
             int? bucketVal = GetFirstOnBit(input);
@@ -596,7 +594,7 @@ namespace NeoCortexApi.Encoders
                     return (new int[0], (new Dictionary<string, object>(), new List<object>()));
                 }
 
-                }
+            }
 
 
 
@@ -1098,100 +1096,99 @@ namespace NeoCortexApi.Encoders
     internal class Buc ketInfo
     {
         public double Value { get; internal set; }
+}
+
+internal class SM32
+{
+    private int numCategories;
+    private int n;
+
+    public SM32(int numCategories, int n)
+    {
+        this.numCategories = numCategories;
+        this.n = n;
+    }
+}
+
+internal struct NewStruct
+{
+    public Dictionary<object, object> Item1;
+    public List<object> Item2;
+
+    public NewStruct(Dictionary<object, object> item1, List<object> item2)
+    {
+        Item1 = item1;
+        Item2 = item2;
     }
 
-    internal class SM32
+    public override bool Equals(object obj)
     {
-        private int numCategories;
-        private int n;
-
-        public SM32(int numCategories, int n)
-        {
-            this.numCategories = numCategories;
-            this.n = n;
-        }
+        return obj is NewStruct other &&
+               EqualityComparer<Dictionary<object, object>>.Default.Equals(Item1, other.Item1) &&
+               EqualityComparer<List<object>>.Default.Equals(Item2, other.Item2);
     }
 
-    internal struct NewStruct
+    public override int GetHashCode()
     {
-        public Dictionary<object, object> Item1;
-        public List<object> Item2;
-
-        public NewStruct(Dictionary<object, object> item1, List<object> item2)
-        {
-            Item1 = item1;
-            Item2 = item2;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is NewStruct other &&
-                   EqualityComparer<Dictionary<object, object>>.Default.Equals(Item1, other.Item1) &&
-                   EqualityComparer<List<object>>.Default.Equals(Item2, other.Item2);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Item1, Item2);
-        }
-
-        public void Deconstruct(out Dictionary<object, object> item1, out List<object> item2)
-        {
-            item1 = Item1;
-            item2 = Item2;
-        }
-
-        public static implicit operator (Dictionary<object, object>, List<object>)(NewStruct value)
-        {
-            return (value.Item1, value.Item2);
-        }
-
-        public static implicit operator NewStruct((Dictionary<object, object>, List<object>) value)
-        {
-            return new NewStruct(value.Item1, value.Item2);
-        }
-
-
+        return HashCode.Combine(Item1, Item2);
     }
 
-    internal struct NewStruct1
+    public void Deconstruct(out Dictionary<object, object> item1, out List<object> item2)
     {
-        public Dictionary<string, object> Item1;
-        public List<object> Item2;
+        item1 = Item1;
+        item2 = Item2;
+    }
 
-        public NewStruct1(Dictionary<string, object> item1, List<object> item2)
-        {
-            Item1 = item1;
-            Item2 = item2;
-        }
+    public static implicit operator (Dictionary<object, object>, List<object>)(NewStruct value)
+    {
+        return (value.Item1, value.Item2);
+    }
 
-        public override bool Equals(object obj)
-        {
-            return obj is NewStruct1 other &&
-                   EqualityComparer<Dictionary<string, object>>.Default.Equals(Item1, other.Item1) &&
-                   EqualityComparer<List<object>>.Default.Equals(Item2, other.Item2);
-        }
+    public static implicit operator NewStruct((Dictionary<object, object>, List<object>) value)
+    {
+        return new NewStruct(value.Item1, value.Item2);
+    }
 
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Item1, Item2);
-        }
 
-        public void Deconstruct(out Dictionary<string, object> item1, out List<object> item2)
-        {
-            item1 = Item1;
-            item2 = Item2;
-        }
+}
 
-        public static implicit operator (Dictionary<string, object>, List<object>)(NewStruct1 value)
-        {
-            return (value.Item1, value.Item2);
-        }
+internal struct NewStruct1
+{
+    public Dictionary<string, object> Item1;
+    public List<object> Item2;
 
-        public static implicit operator NewStruct1((Dictionary<string, object>, List<object>) value)
-        {
-            return new NewStruct1(value.Item1, value.Item2);
-        }
+    public NewStruct1(Dictionary<string, object> item1, List<object> item2)
+    {
+        Item1 = item1;
+        Item2 = item2;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is NewStruct1 other &&
+               EqualityComparer<Dictionary<string, object>>.Default.Equals(Item1, other.Item1) &&
+               EqualityComparer<List<object>>.Default.Equals(Item2, other.Item2);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Item1, Item2);
+    }
+
+    public void Deconstruct(out Dictionary<string, object> item1, out List<object> item2)
+    {
+        item1 = Item1;
+        item2 = Item2;
+    }
+
+    public static implicit operator (Dictionary<string, object>, List<object>)(NewStruct1 value)
+    {
+        return (value.Item1, value.Item2);
+    }
+
+    public static implicit operator NewStruct1((Dictionary<string, object>, List<object>) value)
+    {
+        return new NewStruct1(value.Item1, value.Item2);
     }
 }
 
