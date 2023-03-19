@@ -469,6 +469,7 @@ namespace NeoCortexApi.Encoders
 
         private string bitsToString(double[] output, int start, int end)
         {
+            //Returns a string representing a numpy array of 0's and 1's
             StringBuilder sb = new StringBuilder();
             for (int i = start; i < end; i++)
             {
