@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Reflection.Emit;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Xml.Linq;
 using static Numpy.np;
@@ -520,6 +521,14 @@ namespace NeoCortexApi.Encoders
             ///Each encoder type can define it's own metric for closeness. For example,
             ///a category encoder may return either 1 or 0, if the scalar matches exactly
             ///or not.A scalar encoder might return a percentage match, etc.
+
+            ///:param expValues: Array of expected scalar values, typically obtained from
+            ///         :meth:`.getScalars`
+            ///  :param actValues: Array of actual values, typically obtained from
+            ///         :meth:`.topDownCompute`
+
+            ///   :return: Array of closeness scores, one per item in expValues(or
+            ///  actValues).
 
             // Fallback closeness is a percentage match
             if (Encoders == null)
