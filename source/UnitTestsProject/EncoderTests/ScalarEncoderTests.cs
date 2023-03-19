@@ -438,6 +438,8 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
+
+
         /// <summary>
         /// The getDefaultSettings
         /// </summary>

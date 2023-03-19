@@ -18,6 +18,8 @@ using System.Xml.Linq;
 using static Numpy.np;
 using static System.Net.WebRequestMethods;
 
+
+
 namespace NeoCortexApi.Encoders
 {
     /// <summary>

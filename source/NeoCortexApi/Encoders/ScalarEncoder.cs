@@ -1158,6 +1158,8 @@ namespace NeoCortexApi.Encoders
             return (value.Item1, value.Item2);
         }
 
+
+
         public static implicit operator NewStruct((Dictionary<object, object>, List<object>) value)
         {
             return new NewStruct(value.Item1, value.Item2);
