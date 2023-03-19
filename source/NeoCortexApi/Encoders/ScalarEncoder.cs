@@ -1147,11 +1147,13 @@ namespace NeoCortexApi.Encoders
             return HashCode.Combine(Item1, Item2);
         }
 
+
         public void Deconstruct(out Dictionary<object, object> item1, out List<object> item2)
         {
             item1 = Item1;
             item2 = Item2;
         }
+
 
         public static implicit operator (Dictionary<object, object>, List<object>)(NewStruct value)
         {
