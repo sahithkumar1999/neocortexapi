@@ -306,28 +306,130 @@ namespace UnitTestsProject.EncoderTests
             var encoder = new ScalarEncoder(10, 0, 100, true);
 
             var ranges1 = new List<Tuple<double, double>>()
-    {
-        Tuple.Create(1.0, 3.0),
-        Tuple.Create(7.0, 10.0)
-    };
+            {
+              Tuple.Create(1.0, 3.0),
+              Tuple.Create(7.0, 10.0)
+            };
 
             Assert.AreEqual("1.00-3.00, 7.00-10.00", encoder.GenerateRangeDescription(ranges1));
 
             var ranges2 = new List<Tuple<double, double>>()
-    {
-        Tuple.Create(2.5, 2.5)
-    };
+            {
+               Tuple.Create(2.5, 2.5)
+            };
 
             Assert.AreEqual("2.50", encoder.GenerateRangeDescription(ranges2));
 
             var ranges3 = new List<Tuple<double, double>>()
-    {
-        Tuple.Create(1.0, 1.0),
-        Tuple.Create(5.0, 6.0)
-    };
+            {
+               Tuple.Create(1.0, 1.0),
+               Tuple.Create(5.0, 6.0)
+            };
 
             Assert.AreEqual("1.00, 5.00-6.00", encoder.GenerateRangeDescription(ranges3));
         }
+
+
+        [TestMethod]
+        public void ClosenessScorestest1()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+            { "W", 21},
+            { "N", 1024},
+            { "Radius", -1.0},
+            { "MinVal", 0.0},
+            { "MaxVal", 100.0 },
+            { "Periodic", true},
+            { "Name", "scalar_periodic"},
+            { "ClipInput", false},
+            });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 51 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
+            Assert.AreEqual(expectedCloseness, encoder.ClosenessScores(expValues, actValues, fractional)[0], 0.01);
+        }
+
+        [TestMethod]
+        public void ClosenessScorestest2()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21},
+        { "N", 1024},
+        { "Radius", -1.0},
+        { "MinVal", 0.0},
+        { "MaxVal", 100.0 },
+        { "Periodic", false},
+        { "Name", "scalar_nonperiodic"},
+        { "ClipInput", false},
+    });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 50.3 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
+            double maxDifference = 0.01;
+            Assert.AreEqual(expectedCloseness, encoder.ClosenessScores(expValues, actValues, fractional)[0], maxDifference);
+        }
+
+        [TestMethod]
+        public void ClosenessScorestest3()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21 },
+        { "N", 1024 },
+        { "Radius", -1.0 },
+        { "MinVal", 0.0 },
+        { "MaxVal", 100.0 },
+        { "Periodic", true },
+        { "Name", "scalar_periodic" },
+        { "ClipInput", false },
+    });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 70 };
+            bool fractional = true;
+            double expectedCloseness = 0.8;
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01, $"Expected closeness: {expectedCloseness}, Actual closeness: {actualCloseness}");
+        }
+
+        [TestMethod]
+        public void ClosenessScoresTest4()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21},
+        { "N", 1024},
+        { "Radius", -1.0},
+        { "MinVal", 0.0},
+        { "MaxVal", 100.0 },
+        { "Periodic", false},
+        { "Name", "scalar_nonperiodic"},
+        { "ClipInput", false},
+    });
+
+            double[] expValues = new double[] { 25 };
+            double[] actValues = new double[] { 75 };
+            bool fractional = true;
+            double expectedCloseness = 0.5;
+
+            // Act
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+
+            // Assert
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01);
+        }
+
+
 
 
 

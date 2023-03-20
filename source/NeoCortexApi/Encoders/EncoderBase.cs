@@ -51,6 +51,7 @@ namespace NeoCortexApi.Encoders
         // Moved to MultiEncoder.
         //protected Dictionary<EncoderTuple, List<EncoderTuple>> encoders;
         protected List<String> scalarNames;
+        private object[] encoders;
 
         /// <summary>
         /// Default constructor.
@@ -219,6 +220,7 @@ namespace NeoCortexApi.Encoders
         /// Returns true if the underlying encoder works on deltas
         /// </summary>
         public abstract bool IsDelta { get; }
+        public (object name, object enc, object offset) encoder { get; private set; }
         #endregion
 
         /// <summary>
@@ -358,6 +360,48 @@ namespace NeoCortexApi.Encoders
             return HtmSerializer.DeserializeObject<T>(sr, name, excludeMembers);
         }
 
+        /*
+
+        public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
+        {
+            // Fallback closenss is a percentage match
+            if (this.encoders == null)
+            {
+                double err = Math.Abs(expValues[0] - actValues[0]);
+                double closeness;
+                if (fractional)
+                {
+                    double denom = Math.Max(expValues[0], actValues[0]);
+                    if (denom == 0)
+                    {
+                        denom = 1.0;
+                    }
+                    closeness = 1.0 - err / denom;
+                    if (closeness < 0)
+                    {
+                        closeness = 0;
+                    }
+                }
+                else
+                {
+                    closeness = err;
+                }
+                return new double[] { closeness };
+            }
+
+            // Concatenate the results from closeness scores on each child encoder
+            int scalarIdx = 0;
+            List<double> retVals = new List<double>();
+            foreach (var encoder in this.encoders)
+            {
+                var (name, enc, offset) = this.encoder;
+                double[] values = enc.ClosenessScores(expValues.Skip(scalarIdx).ToArray(), actValues.Skip(scalarIdx).ToArray(), fractional);
+                scalarIdx += values.Length;
+                retVals.AddRange(values);
+            }
+            return retVals.ToArray();
+        }
+        */
         public bool Equals(IHtmModule other)
         {
             return this.Equals((object)other);

@@ -382,9 +382,41 @@ namespace NeoCortexApi.Encoders
             // Output 1-D array of same length resulted in parameter N    
             return output;
         }
-            
 
 
+
+        public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
+        {
+            double expValue = expValues[0];
+            double actValue = actValues[0];
+            double err;
+
+            if (Periodic)
+            {
+                expValue = expValue % MaxVal;
+                actValue = actValue % MaxVal;
+                err = Math.Min(Math.Abs(expValue - actValue), MaxVal - Math.Abs(expValue - actValue));
+            }
+            else
+            {
+                err = Math.Abs(expValue - actValue);
+            }
+
+            double closeness;
+            if (fractional)
+            {
+                double range = (MaxVal - MinVal) + (ClipInput ? 0 : (2 * (MaxVal - MinVal) / (N - 1)));
+                double pctErr = err / range;
+                pctErr = Math.Min(1.0, pctErr);
+                closeness = 1.0 - pctErr;
+            }
+            else
+            {
+                closeness = err;
+            }
+
+            return new double[] { closeness };
+        }
 
 
 
