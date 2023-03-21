@@ -318,6 +318,110 @@ namespace NeoCortexApi.Encoders
         }
 
 
+        public int EncodeIntoArray(int input, double[] output, int n, bool learn = true)
+        {
+
+            if (input != 0 && !typeof(System.IConvertible).IsAssignableFrom(input.GetType()))
+            {
+                throw new ArgumentException("Expected a scalar input but got input of type " + input.GetType().Name);
+            }
+
+            if ((!Double.IsNaN(input)) && float.IsNaN((float)input))
+            {
+                input = 0;
+            }
+
+            int bucketval = (int)GetFirstOnBit(input);
+            int minbin = this.GetFirstOnBit(input) ?? 0;
+            int? bucketVal = GetFirstOnBit(input);
+            // For periodic encoders, the bucket index is the index of the center bit
+            if (this.Periodic)
+            {
+                // None is returned for missing value
+                for (int i = 0; i < this.N; i++)
+                {
+                    output[i] = 0;
+                }
+                // TODO: should all 1s, or random SDR be returned instead?
+            }
+
+            else
+            {
+                // The bucket index is the index of the first bit to set in the output
+                for (int i = 0; i < this.N; i++)
+                {
+                    output[i] = 0;
+                }
+
+                minbin = (int)bucketVal;
+                int maxbin = minbin + 2 * HalfWidth;
+
+                if (this.Periodic)
+                {
+                    // Handle the edges by computing wrap-around
+                    if (maxbin >= this.N)
+                    {
+                        int bottombins = maxbin - this.N + 1;
+                        for (int i = 0; i < bottombins; i++)
+                        {
+                            output[i] = 1;
+                        }
+                        maxbin = this.N - 1;
+                    }
+
+                    if (minbin < 0)
+                    {
+                        int topbins = -minbin;
+                        for (int i = this.N - topbins; i < this.N; i++)
+                        {
+                            output[i] = 1;
+                        }
+                        minbin = 0;
+                    }
+                }
+
+                Debug.Assert(minbin >= 0);
+                Debug.Assert(maxbin < this.N);
+
+                // Set the output (except for periodic wraparound)
+                for (int i = minbin; i <= maxbin; i++)
+                {
+                    output[i] = 1;
+                }
+            }
+            int verbosity = 0;
+            // Debug the decode() method
+            if (verbosity >= 2)
+            {
+                Console.WriteLine();
+                Console.WriteLine("input: " + input);
+                Console.WriteLine("range: " + MinVal + " - " + MaxVal);
+                Console.WriteLine("n: " + this.N + " w: " + this.W + " resolution: " + this.Resolution +
+                                  " radius: " + this.Radius + " periodic: " + this.Periodic);
+                Console.Write("output: ");
+                PPrint(output);
+                Console.WriteLine("input desc: " + DecodedToStr(Decode(output)));
+            }
+            return 0;
+
+        }
+
+        private string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> tuple)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void PPrint(double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> Decode(double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
+
 
 
         /*

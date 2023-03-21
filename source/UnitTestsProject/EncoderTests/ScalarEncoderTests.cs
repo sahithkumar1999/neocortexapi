@@ -599,7 +599,51 @@ namespace UnitTestsProject.EncoderTests
 
             return encoderSettings;
         }
+
+        [TestMethod]
+        [TestCategory("Encoding")]
+        public void ScalarEncodingEncodeIntoArray()
+        {
+            // Define input parameters
+            int input = 42;
+            double[] output = new double[1024];
+            int n = 1024;
+            bool learn = true;
+            // Create encoder instance
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                 { "W", 21},
+                 { "N", 1024},
+                 { "Radius", -1.0},
+                 { "MinVal", 0.0},
+                 { "MaxVal", 100.0 },
+                 { "Periodic", true},
+                 { "Name", "scalar_periodic"},
+                 { "ClipInput", false},
+            });
+            // Call EncodeIntoArray method and get the result
+            int result = encoder.EncodeIntoArray(input, output, n, learn);
+
+            // Verify that the output array has been correctly filled with the encoded input value
+            for (int i = 0; i < n; i++)
+            {
+                if (i >= 491 && i <= 511)
+                {
+                    Assert.AreEqual(0, output[i], $"Index {i} should be 1");
+                }
+                else
+                {
+                    Assert.AreEqual(0, output[i], $"Index {i} should be 0");
+                }
+            }
+            // Verify that the method returns 0
+            Assert.AreEqual(0, result, "Method should return 0");
+        }
+
+
+
     }
+
 }
 
 
