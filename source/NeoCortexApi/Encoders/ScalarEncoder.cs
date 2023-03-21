@@ -176,6 +176,120 @@ namespace NeoCortexApi.Encoders
         }
 
 
+        public static int[] decode(int[] output, int minVal, int maxVal, int n, double w, bool periodic)
+        {
+            List<int[]> runs = new List<int[]>();
+            int start = -1;
+            int prev = 0;
+            int count = 0;
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (output[i] == 0)
+                {
+                    if (start != -1)
+                    {
+                        runs.Add(new int[] { start, prev, count });
+                        start = -1;
+                        count = 0;
+                    }
+                }
+                else
+                {
+                    if (start == -1)
+                    {
+                        start = i;
+                    }
+                    prev = i;
+                    count++;
+                }
+            }
+            if (start != -1)
+            {
+                runs.Add(new int[] { start, prev, count });
+            }
+            if (periodic && runs.Count > 1)
+            {
+                int[] first = runs[0];
+                int[] last = runs[runs.Count - 1];
+                if (first[0] == 0 && last[1] == output.Length - 1)
+                {
+                    first[1] = last[1];
+                    first[2] += last[2];
+                    runs.RemoveAt(runs.Count - 1);
+                }
+            }
+            List<int> input = new List<int>();
+            foreach (int[] run in runs)
+            {
+                int left = (int)Math.Floor(run[0] + 0.5 * (run[2] - w));
+                int right = (int)Math.Floor(run[1] - 0.5 * (run[2] - w));
+                if (left < 0 && periodic)
+                {
+                    left += output.Length;
+                    right += output.Length;
+                }
+                for (int i = left; i <= right; i++)
+                {
+                    int val = (int)Math.Round(map(i, 0, output.Length - 1, minVal, maxVal));
+                    if (periodic)
+                    {
+                        val = wrap(val, minVal, maxVal);
+                    }
+                    if (val >= minVal && val <= maxVal)
+                    {
+                        input.Add(val);
+                    }
+                }
+            }
+            input.Sort();
+            if (periodic && input.Count > 0)
+            {
+                int max = input[input.Count - 1];
+                if (max > maxVal)
+                {
+                    List<int> input2 = new List<int>();
+                    foreach (int val in input)
+                    {
+                        if (val <= maxVal)
+                        {
+                            input2.Add(val);
+                        }
+                    }
+                    input = input2;
+                    input2 = new List<int>();
+                    foreach (int val in input)
+                    {
+                        if (val >= minVal)
+                        {
+                            input2.Add(val);
+                        }
+                    }
+                    input = input2;
+                }
+            }
+            return input.ToArray();
+        }
+
+        private static double map(double val, double fromMin, double fromMax, double toMin, double toMax)
+        {
+            return (val - fromMin) * (toMax - toMin) / (fromMax - fromMin) + toMin;
+        }
+
+        private static int wrap(int val, int minVal, int maxVal)
+        {
+            int range = maxVal - minVal + 1;
+            while (val < minVal)
+            {
+                val += range;
+            }
+            while (val > maxVal)
+            {
+                val -= range;
+            }
+            return val;
+        }
+
+
         /// <summary>
         /// Gets the index of the first non-zero bit.
         /// </summary>

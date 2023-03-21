@@ -641,7 +641,38 @@ namespace UnitTestsProject.EncoderTests
         }
 
 
+        [TestMethod]
+        [TestCategory("Encoding")]
+        public void ScalarEncodingDecode()
+        {
+            int[] output1 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output2 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output3 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output4 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output5 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output6 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output7 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output8 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int minVal = 0;
+            int maxVal = 100;
+            int n = 14;
+            double w = 3.0;
+            bool periodic = true;
 
+            int[][] testCases = new int[][] { output1, output2, output3, output4, output5, output6, output7, output8 };
+
+            foreach (int[] output in testCases)
+            {
+                int[] input = ScalarEncoder.decode(output, minVal, maxVal, n, w, periodic);
+
+                Console.WriteLine("Output: " + string.Join(",", output));
+                Console.WriteLine("Input: " + string.Join(",", input));
+                Console.WriteLine("----------------------------------------");
+            }
+
+        }
+
+        
     }
 
 }
