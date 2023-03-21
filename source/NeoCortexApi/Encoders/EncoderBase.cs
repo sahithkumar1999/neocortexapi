@@ -39,9 +39,9 @@ namespace NeoCortexApi.Encoders
         protected int nInternal;
 
         protected double rangeInternal;
-        
+
         protected bool encLearningEnabled;
-        
+
         protected List<FieldMetaType> flattenedFieldTypeList;
 
         protected Dictionary<Dictionary<string, int>, List<FieldMetaType>> decoderFieldTypes;
@@ -232,7 +232,7 @@ namespace NeoCortexApi.Encoders
 
         public double bucketVal { get => (double)this["bucketVal"]; set => this["bucketVal"] = (double)value; }
 
-       
+
         /// <summary>
         /// How many input values are embedded in the single encoding bit. Res = (max-min)/N.
         /// </summary>
@@ -288,7 +288,7 @@ namespace NeoCortexApi.Encoders
             }
         }
 
-        
+
 
 
         /// <summary>
@@ -315,7 +315,7 @@ namespace NeoCortexApi.Encoders
         //public abstract int[] Encode(object inputData);
 
 
-       
+
 
         /// <summary>
         /// Returns a list of items, one for each bucket defined by this encoder. Each item is the value assigned to that bucket, this is the same as the
@@ -325,7 +325,7 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         /// <typeparam name="T">class type parameter so that this method can return encoder specific value types</typeparam>
         /// <returns>list of items, each item representing the bucket value for that bucket.</returns>
-        
+
 
         /// <summary>
         /// Returns an array containing the sum of the right applied multiplications of each slice to the array passed in.
@@ -393,7 +393,7 @@ namespace NeoCortexApi.Encoders
             return retVals;
         }
         public abstract void EncodeIntoArray(object inputData, double[] output);
-       
+
 
         public int GetWidth()
         {
@@ -403,7 +403,7 @@ namespace NeoCortexApi.Encoders
 
         private Type defaultDtype = typeof(double);
 
-       
+
 
         public void EncodeIntoArray(object inputData, Array output)
         {
@@ -436,7 +436,7 @@ namespace NeoCortexApi.Encoders
             Console.WriteLine();
         }
 
-       
+
 
 
 
@@ -593,7 +593,7 @@ namespace NeoCortexApi.Encoders
             Dictionary<string, int[]> sdrMap = new Dictionary<string, int[]>();
             List<string> inpVals = new List<string>();
             StringBuilder sb = new StringBuilder();
-            
+
             for (double i = this.MinVal; i < this.MaxVal; i += 1.0)
             {
                 var sdr = this.Encode(i);
@@ -603,7 +603,7 @@ namespace NeoCortexApi.Encoders
                 if (traceValues)
                 {
                     sb.AppendLine($"{i.ToString("000")} - {Helpers.StringifyVector(sdr, separator: null)}");
-                }                
+                }
             }
 
             sb.AppendLine();
@@ -616,7 +616,7 @@ namespace NeoCortexApi.Encoders
         }
 
         public abstract List<T> GetBucketValues<T>();
-        
+
         public override bool Equals(object obj)
         {
             var encoder = obj as EncoderBase;
@@ -644,8 +644,8 @@ namespace NeoCortexApi.Encoders
 
         public void Serialize(object obj, string name, StreamWriter sw)
         {
-            var excludeMembers = new List<string> 
-            { 
+            var excludeMembers = new List<string>
+            {
                 nameof(EncoderBase.Properties),
                 nameof(EncoderBase.halfWidth),
                 nameof(EncoderBase.rangeInternal),
@@ -699,5 +699,5 @@ namespace NeoCortexApi.Encoders
         }
     }
 
-    
+
 }
