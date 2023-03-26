@@ -197,116 +197,65 @@ namespace NeoCortexApi.Encoders
                 {
                     if (start == -1)
                     {
-                        start = i;
-                        {
-            RangeInternal = (float)(this.MaxVal - this.MinVal);
-
-            if (!Periodic)
-            {
-               
-                Resolution = RangeInternal / (N - W);
-            }
-            else
-            {
-                
-                Resolution = (float)RangeInternal / this.N;
-            }
-            Radius = W * Resolution;
-
-            if (Periodic)
-            {
-                Range = RangeInternal;
-            }
-            else
-            {
-                Radius = this.RangeInternal * this.Resolution;
-            }
-            string Name = "[" + MinVal + ":" + MaxVal + "]";
-        }
-
-
-
-        /// <summary>
-        /// Gets the index of the first non-zero bit.
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns>Null in a case of an error.</returns>
-        /// <exception cref="ArgumentException"></exception>
-        protected int? GetFirstOnBit(double input)
-        {
-            if (input == double.NaN)
-            {
-                return null;
-            }
-            else
-            {
-                if (input < MinVal)
-                {
-                    if (ClipInput && !Periodic)
-                    {
-                        if (this.verbosity > 0)
-                        {
-                            Debug.WriteLine("Clipped input " + Name + "=" + input + " to minval " + MinVal);
-                            input = MinVal;
-                        }
                     }
-                    else
+                    prev = i;
+                    count++;
+                }
+            }
+            if (start != -1)
+            {
+                runs.Add(new int[] { start, prev, count });
+            }
+            if (periodic && runs.Count > 1)
+            {
+                int[] first = runs[0];
+                int[] last = runs[runs.Count - 1];
+                if (first[0] == 0 && last[1] == output.Length - 1)
+                {
+                    first[1] = last[1];
+                    first[2] += last[2];
+                    runs.RemoveAt(runs.Count - 1);
+                }
+            }
+            List<int> input = new List<int>();
+            foreach (int[] run in runs)
+            {
+                int left = (int)Math.Floor(run[0] + 0.5 * (run[2] - w));
+                int right = (int)Math.Floor(run[1] - 0.5 * (run[2] - w));
+                if (left < 0 && periodic)
+                {
+                    left += output.Length;
+                    right += output.Length;
+                }
+                for (int i = left; i <= right; i++)
+                {
+                    int val = (int)Math.Round(map(i, 0, output.Length - 1, minVal, maxVal));
+                    if (periodic)
                     {
-                        throw new ArgumentException($"Input ({input}) less than range ({MinVal} - {MaxVal}");
+                        val = wrap(val, minVal, maxVal);
+                    }
+                    if (val >= minVal && val <= maxVal)
+                    {
+                        input.Add(val);
                     }
                 }
             }
-
-            if (this.Periodic)
+            input.Sort();
+            if (periodic && input.Count > 0)
             {
-                if (input >= this.MaxVal)
+                int max = input[input.Count - 1];
+                if (max > maxVal)
                 {
-                    throw new ArgumentException($"Input ({input}) greater than periodic range ({MinVal} - {MaxVal}");
-                }
-            }
-            else
-            {
-                if (input > this.MaxVal)
-                {
-                    if (ClipInput)
-                    {
-                        if (this.verbosity >= 0)
-                        {
-                            Debug.WriteLine($"Clipped input {Name} = {input} to maxval MaxVal");
-                            input = MaxVal;
-                        }
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Input ({input}) greater than periodic range ({MinVal} - {MaxVal}");
-                    }
-                }
-            }
-
-            int centerbin;
-            if (Periodic)
-            {
-                centerbin = (int)((input - this.MinVal) * this.NInternal / this.Range + this.Padding);
-            }
-            else
-            {
-                centerbin = ((int)(((input - this.MinVal) + this.Resolution / 2) / this.Resolution)) + this.Padding;
-            }
-            // We use the first bit to be set in the encoded output as the bucket index
-
-            int minbin = centerbin - this.HalfWidth;
-
-            return minbin;
-        }
+                    List<int> input2 = new List<int>();
 
 
-        /// <summary>
-        /// Gets the bucket index of the given value.
-        /// </summary>
-        /// <param name="inputData">The data to be encoded. Must be of type double.</param>
-        /// <param name="bucketIndex">The bucket index.</param>
-        /// <returns></returns>
-       public int? GetBucketIndex(object inputData)
+                    /// <summary>
+                    /// Gets the bucket index of the given value.
+                    /// </summary>
+                    /// <param name="inputData">The data to be encoded. Must be of type double.</param>
+                    /// <param name="bucketIndex">The bucket index.</param>
+                    /// <returns></returns>
+                    public int? GetBucketIndex(object inputData)
         {
             double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
 
