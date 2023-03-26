@@ -98,19 +98,6 @@ namespace NeoCortexApi.Encoders
                 if ((MinVal % ((int)MinVal)) > 0 ||
                     (MaxVal % ((int)MaxVal)) > 0)
                 {
-
-                    // There are three different ways of thinking about the representation. Handle
-                    // each case here.
-                    this.InitEncoder(W, MinVal, MaxVal, N, Radius, Resolution);
-
-            //NInternal represents the output _area excluding the possible padding on each side
-            this.NInternal = this.N - 2 * this.Padding;
-
-            if (Name == null)
-            {
-                if ((MinVal % ((int)MinVal)) > 0 ||
-                    (MaxVal % ((int)MaxVal)) > 0)
-                {
                     Name = "[" + MinVal + ":" + MaxVal + "]";
                 }
                 else
@@ -128,18 +115,12 @@ namespace NeoCortexApi.Encoders
                         "Number of bits in the SDR (%d) must be greater than 2, and recommended >= 21 (use forced=True to override)");
                 }
             }
-            // Initialized bucketValues to null.
-            this.bucketValues = null;
-
-
-
         }
-        
-         
 
-        public void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
+
+        protected void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
         {
-            if (n != 0)
+            if (N != 0)
             {
                 if (double.NaN != minVal && double.NaN != maxVal)
                 {
@@ -168,11 +149,11 @@ namespace NeoCortexApi.Encoders
             {
                 if (radius != 0)
                 {
-                    Resolution = (float)(this.Radius) / W;
+                    Resolution = Radius / w;
                 }
                 else if (resolution != 0)
                 {
-                    Radius = Resolution * W;
+                    Radius = Resolution * w;
                 }
                 else
                 {
@@ -189,16 +170,35 @@ namespace NeoCortexApi.Encoders
                     Range = RangeInternal + Resolution;
                 }
 
-                double nFloat = W * (this.Range / this.Radius) + 2 * this.Padding;
+                double nFloat = w * (Range / Radius) + 2 * Padding;
                 N = (int)(nFloat);
             }
-
-
-
         }
 
-        public void RecalcParams()
+
+        public static int[] decode(int[] output, int minVal, int maxVal, int n, double w, bool periodic)
         {
+            List<int[]> runs = new List<int[]>();
+            int start = -1;
+            int prev = 0;
+            int count = 0;
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (output[i] == 0)
+                {
+                    if (start != -1)
+                    {
+                        runs.Add(new int[] { start, prev, count });
+                        start = -1;
+                        count = 0;
+                    }
+                }
+                else
+                {
+                    if (start == -1)
+                    {
+                        start = i;
+                        {
             RangeInternal = (float)(this.MaxVal - this.MinVal);
 
             if (!Periodic)
