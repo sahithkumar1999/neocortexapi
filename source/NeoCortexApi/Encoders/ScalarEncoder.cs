@@ -598,441 +598,33 @@ namespace NeoCortexApi.Encoders
             }
 
             // Output 1-D array of same length resulted in parameter N    
-            while (i < nz.Length)
-                {
-                    if (nz[i] == run[0] + run[1])
-                    {
-                        run[1] += 1;
-                    }
-                    else
-                    {
-                        runs.Add((run[0], run[1]));
-                        run = new int[] { nz[i], 1 };
-                    }
-                    i += 1;
-                }
-                runs.Add((run[0], run[1]));
-            }
-
-            // If we have a periodic encoder, merge the first and last run if they
-            // both go all the way to the edges
-            if (this.Periodic && runs.Count > 1)
-            {
-                if (runs[0].Item1 == 0 && runs[^1].Item1 + runs[^1].Item2 == this.N)
-                {
-                    runs[^1] = (runs[^1].Item1, runs[^1].Item2 + runs[0].Item2);
-                    runs.RemoveAt(0);
-                }
-            }
-
-
-            // ------------------------------------------------------------------------
-            // Now, for each group of 1's, determine the "left" and "right" edges, where
-            //  the "left" edge is inset by halfwidth and the "right" edge is inset by
-            //  halfwidth.
-            // For a group of width w or less, the "left" and "right" edge are both at
-            //   the center position of the group.
-            List<int[]> ranges = new List<int[]>();
-            foreach (var run in runs)
-            {
-                Start = run.Item1;
-                runLen = run.Item2;
-                if (runLen <= this.W)
-                {
-                    left = right = Start + runLen / 2;
-                }
-                else
-                {
-                    left = Start + this.HalfWidth;
-                    right = Start + runLen - 1 - this.HalfWidth;
-                }
-
-                ranges.Add(new int[] { left, right });
-
-                if (!this.Periodic)
-                {
-                    // Convert to input space.
-                    inMin = (left - Padding) * this.Resolution + this.MinVal;
-                    inMax = (right - Padding) * this.Resolution + this.MinVal;
-                }
-                else
-                {
-                    // Convert to input space.
-                    inMin = (left - this.Padding) * this.Range / this.NInternal + this.MinVal;
-                    inMax = (right - this.Padding) * this.Range / this.NInternal + this.MinVal;
-                }
-
-                // Handle Wape-around if periodic 
-                if (this.Periodic)
-                {
-                    if (inMin >= this.MaxVal)
-                    {
-                        inMin -= this.Range;
-                        inMax -= this.Range;
-                    }
-                }
-
-
-                // Clip low end
-                if (inMin < this.MinVal)
-                {
-                    inMin = this.MinVal;
-                }
-                if (inMax < this.MinVal)
-                {
-                    inMax = this.MinVal;
-                }
-
-                /// If we have a periodic encoder, and the max is past the edge, break into
-                ///  2 separate ranges
-                if (this.Periodic && inMax >= this.MaxVal)
-                {
-                    ranges.Add(new int[] { (int)inMin, (int)this.MaxVal });
-                    ranges.Add(new int[] { (int)this.MinVal, (int)(inMax - Range) });
-                }
-                else
-                {
-                    if (inMax > this.MaxVal)
-                    {
-                        inMax = this.MaxVal;
-                    }
-                    if (inMin > this.MaxVal)
-                    {
-                        inMin = this.MaxVal;
-                    }
-                    ranges.Add(new int[] { (int)inMin, (int)inMax });
-                }
-
-            }
-
-            var desc = this.GenerateRangeDescription(ranges);
-            // Return result
-            if (parentFieldName != "")
-            {
-                fieldName = $"{parentFieldName}.{Name}";
-            }
-            else
-            {
-                fieldName = Name;
-            }
-
-            var result = new Dictionary<string, Tuple<List<double[]>, List<string>>>();
-            List<double[]> doubleRanges = ranges.Select(r => r.Select(x => (double)x).ToArray()).ToList();
-            result.Add(fieldName, new Tuple<List<double[]>, List<string>>(doubleRanges, new List<string>() { fieldName }));
-            int Result=Convert.ToInt32(result);
-            return Result;
-
-        }
-
-        private object GenerateRangeDescription(List<int[]> ranges)
-        {
-            throw new NotImplementedException();
-        }
-
-        private double[] EncodeIntoArray(int input)
-        {
-            throw new NotImplementedException();
-        }
-
-        
-
-        private double[] EncodeIntoArray(double value, int input)
-        {
-            throw new NotImplementedException();
+            return output;
         }
 
 
-
-        public string GenerateRangeDescription(List<double[]> ranges)
-        {
-            string desc = "";
-            int numRanges = ranges.Count;
-
-            for (int i = 0; i < numRanges; i++)
-            {
-                if (ranges[i][0] != ranges[i][1])
-                {
-                    desc += $"{ranges[i][0]:#.##}-{ranges[i][1]:#.##}";
-                }
-                else
-                {
-                    desc += $"{ranges[i][0]:#.##}";
-                }
-
-                if (i < numRanges - 1)
-                {
-                    desc += ", ";
-                }
-            }
-
-            return desc;
-        }
-
-
-
-
-
-
-        public object Get_topDownValues()
-        {
-            return _topDownValues;
-        }
-
-        //By defining _topDownMappingM as a member variable of the ScalarEncoder class,
-        //you will be able to access it within the getTopDownMapping()
-
-        public double[][] GetTopDownMapping()
-        {
-            // Do we need to build up our reverse mapping table?
-            if (_topDownMappingM == 0)
-            {
-                // The input scalar value corresponding to each possible output encoding
-                double[] topDownValues;
-                if (Periodic)
-                {
-                    topDownValues = Enumerable.Range(0, nInternal)
-                                               .Select(i => MinVal + (i + 0.5) * Resolution)
-                                               .Where(val => val < MaxVal)
-                                               .ToArray();
-                }
-                else
-                {
-                    topDownValues = Enumerable.Range(0, nInternal + 1)
-                                               .Select(i => MinVal + i * Resolution)
-                                               .Where(val => val <= MaxVal)
-                                               .ToArray();
-                }
-
-                // Each row represents an encoded output pattern
-                int numCategories = topDownValues.Length;
-                mappingM = new double[numCategories][];
-                for (int i = 0; i < numCategories; i++)
-                {
-                    double value = topDownValues[i];
-                    value = Math.Max(value, MinVal);
-                    value = Math.Min(value, MaxVal);
-                    double[] outputSpace = new double[N];
-                    EncodeIntoArray(value, outputSpace, learn: false);
-                    mappingM[i] = outputSpace;
-                }
-                double[][] _topDownMappingM = null;
-
-                _topDownMappingM = mappingM;
-            }
-
-            return mappingM;
-        }
-
-        private void EncodeIntoArray(double value, double[] outputSpace, bool learn)
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<double> GetBucketValues()
-        {
-            // Need to re-create?
-            if (this.bucketVal == null)
-            {
-                var topDownMappingM = GetTopDownMapping();
-                this.numBuckets = topDownMappingM.GetLength(0);
-                List<double> bucketValues = new List<double>();
-                List<object> bucketValuesObj = this.bucketValues.Cast<object>().ToList();
-                for (int bucketIdx = 0; bucketIdx < numBuckets; bucketIdx++)
-                {
-                    this.bucketValues.Add(GetBucketInfo(new int { bucketIdx })[0].Value);
-                }
-            }
-
-            return bucketVal;
-        }
-
-        private int[][] GetTopDownMapping(object v)
-        {
-            throw new NotImplementedException();
-        }
-        
-
-        public int getBucketInfo(object buckets)
-        {
-            object inputVal;
-            // Get/generate the topDown mapping table
-            //NOTE: although variable topDownMappingM is unused, some (bad-style) actions
-            //are executed during _getTopDownMapping() so this line must stay here
-            var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
-            // The "category" is simply the bucket index
-            int category = (int)buckets;
-            var encoding = topDownMappingM[category];
-            // Which input value does this correspond to?
-            if (this.Periodic)
-            {
-                inputVal = (this.MinVal + this.Resolution )/ 2.0 + category * this.Resolution;
-            }
-            else
-            {
-                inputVal = this.MinVal + category * this.Resolution;
-            }
-            return new List<object>
-            {
-                EncoderResult(value: inputVal, scalar: inputVal, encoding: encoding)
-            };
-        }
-
-       
-
-        private static int[] RightVecProd(int[][] matrix, int[] vector)
-        {
-            int[] result = new int[matrix.Length];
-
-            for (int i = 0; i < matrix.Length; i++)
-            {
-                int sum = 0;
-
-                for (int j = 0; j < matrix[i].Length; j++)
-                {
-                    sum += matrix[i][j] * vector[j];
-                }
-
-                result[i] = sum;
-            }
-
-            return result;
-        }
-
-        public int topDownCompute(object encoded)
-        {
-            // Get/generate the topDown mapping table
-            var topDownMappingM = this.GetTopDownMapping(this.Get_topDownValues());
-
-
-            // See which "category" we match the closest.
-            var category = topDownMappingM.RightVecProd(encoded).Argmax();
-            // Return that bucket info
-            return this.getBucketInfo(new List<object> {
-                    category
-            });
-        }
-
-        public virtual object closenessScores(double[] expValues, double[] actValues, object fractional = null)
-        {
-            object closeness;
-            double expValue = expValues[0];
-            var actValue = actValues[0];
-            if (this.Periodic)
-            {
-                expValue = expValue % this.MaxVal;
-                actValue = actValue % this.MaxVal;
-            }
-            double err = Math.Abs(expValue - actValue);
-            if (this.Periodic)
-            {
-                err = Math.Min(err, this.MaxVal - err);
-            }
-            if ((bool)fractional)
-            {
-                double pctErr = err / (this.MaxVal - this.MinVal);
-                pctErr = Math.Min(1.0, pctErr);
-                closeness = 1.0 - pctErr;
-            }
-            else
-            {
-                closeness = err;
-            }
-            return new List<object> {
-                    closeness
-            };
-        }
-
-
-        public override List<T> GetBucketValues<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-
-
-
-
-        public override string ToString()
-        {
-            string str = "ScalarEncoder:";
-            str += $"  min: {this.MinVal}";
-            str += $"  max: {this.MaxVal}";
-            str += $"  w:   {this.W}";
-            str += $"  n:   {this.N}";
-            str += $"  resolution: {this.Resolution}";
-            str += $"  radius:     {this.Radius}";
-            str += $"  periodic: {this.Periodic}";
-            str += $"  nInternal: {this.NInternal}";
-            str += $"  rangeInternal: {this.RangeInternal}";
-            str += $"  padding: {this.Padding}";
-            return str;
-        }
-        public static object GetSchema(Type cls, object scalarEncoderProto)
-        {
-            return scalarEncoderProto;
-        }
-
-        /*
-        public abstract object Write()
-        {
-            proto.W = this.W;
-            proto.MinVal = this.MinVal;
-            proto.MaxVal = this.MaxVal;
-            proto.Periodic = this.Periodic;
-            // Radius and resolution can be recalculated based on n
-            proto.N = this.N;
-            proto.Name = this.Name;
-            proto.verbosity = this.verbosity;
-            proto.ClipInput = this.ClipInput;
-            return proto;
-        }
-        */
-
-        /*public static object read(object cls, object proto)
-        {
-            object resolution;
-            object radius;
-            if (proto.N != null)
-            {
-                radius = DEFAULT_RADIUS;
-                resolution = DEFAULT_RESOLUTION;
-            }
-            else
-            {
-                radius = proto.Radius;
-                resolution = proto.Resolution;
-            }
-            return new cls(W: proto.W, minval: proto.MinVal, maxval: proto.MaxVal, periodic: proto.Periodic, N: proto.N, name: proto.name, verbosity: proto.verbosity, ClipInput: Encoder.ClipInput(proto.ClipInput), forced: true);
-        }
-
-       */
-
-
-
-        public override void EncodeIntoArray(object inputData, double[] output)
-        {
-            throw new NotImplementedException();
-        }
 
         public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
         {
             double expValue = expValues[0];
             double actValue = actValues[0];
+            double err;
+
             if (Periodic)
             {
                 expValue = expValue % MaxVal;
                 actValue = actValue % MaxVal;
+                err = Math.Min(Math.Abs(expValue - actValue), MaxVal - Math.Abs(expValue - actValue));
+            }
+            else
+            {
+                err = Math.Abs(expValue - actValue);
             }
 
-            double err = Math.Abs(expValue - actValue);
-            if (Periodic)
-            {
-                err = Math.Min(err, MaxVal - err);
-            }
             double closeness;
             if (fractional)
             {
-                double pctErr = err / (MaxVal - MinVal);
+                double range = (MaxVal - MinVal) + (ClipInput ? 0 : (2 * (MaxVal - MinVal) / (N - 1)));
+                double pctErr = err / range;
                 pctErr = Math.Min(1.0, pctErr);
                 closeness = 1.0 - pctErr;
             }
@@ -1047,114 +639,36 @@ namespace NeoCortexApi.Encoders
 
 
 
+
+        /// <summary>
+        /// This method enables running in the network.
+        /// </summary>
+        /// <param name="inputData"></param>
+        /// <param name="learn"></param>
+        /// <returns></returns>
+        public int[] Compute(object inputData, bool learn)
+        {
+            return Encode(inputData);
+        }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>The <see cref="List{T}"/></returns>
+        public override List<T> GetBucketValues<T>()
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+
+
         //public static object Deserialize<T>(StreamReader sr, string name)
         //{
         //    var excludeMembers = new List<string> { nameof(ScalarEncoder.Properties) };
         //    return HtmSerializer2.DeserializeObject<T>(sr, name, excludeMembers);
         //}
-
-    }
-
-    internal class BucketInfo
-    {
-        public double Value { get; internal set; }
-    }
-
-    internal class SM32
-    {
-        private int numCategories;
-        private int n;
-
-        public SM32(int numCategories, int n)
-        {
-            this.numCategories = numCategories;
-            this.n = n;
-        }
-    }
-
-    internal struct NewStruct
-    {
-        public Dictionary<object, object> Item1;
-        public List<object> Item2;
-
-        public NewStruct(Dictionary<object, object> item1, List<object> item2)
-        {
-            Item1 = item1;
-            Item2 = item2;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is NewStruct other &&
-                   EqualityComparer<Dictionary<object, object>>.Default.Equals(Item1, other.Item1) &&
-                   EqualityComparer<List<object>>.Default.Equals(Item2, other.Item2);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Item1, Item2);
-        }
-
-
-        public void Deconstruct(out Dictionary<object, object> item1, out List<object> item2)
-        {
-            item1 = Item1;
-            item2 = Item2;
-        }
-
-
-        public static implicit operator (Dictionary<object, object>, List<object>)(NewStruct value)
-        {
-            return (value.Item1, value.Item2);
-        }
-
-
-
-        public static implicit operator NewStruct((Dictionary<object, object>, List<object>) value)
-        {
-            return new NewStruct(value.Item1, value.Item2);
-        }
-
-        
-    }
-
-    internal struct NewStruct1
-    {
-        public Dictionary<string, object> Item1;
-        public List<object> Item2;
-
-        public NewStruct1(Dictionary<string, object> item1, List<object> item2)
-        {
-            Item1 = item1;
-            Item2 = item2;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is NewStruct1 other &&
-                   EqualityComparer<Dictionary<string, object>>.Default.Equals(Item1, other.Item1) &&
-                   EqualityComparer<List<object>>.Default.Equals(Item2, other.Item2);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Item1, Item2);
-        }
-
-        public void Deconstruct(out Dictionary<string, object> item1, out List<object> item2)
-        {
-            item1 = Item1;
-            item2 = Item2;
-        }
-
-        public static implicit operator (Dictionary<string, object>, List<object>)(NewStruct1 value)
-        {
-            return (value.Item1, value.Item2);
-        }
-
-        public static implicit operator NewStruct1((Dictionary<string, object>, List<object>) value)
-        {
-            return new NewStruct1(value.Item1, value.Item2);
-        }
     }
 }
