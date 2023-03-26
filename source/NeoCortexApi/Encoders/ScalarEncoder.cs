@@ -48,17 +48,14 @@ namespace NeoCortexApi.Encoders
         public ScalarEncoder(Dictionary<string, object> encoderSettings)
         {
             this.Initialize(encoderSettings); public ScalarEncoder()
-        {
-
         }
-        private const double SENTINEL_VALUE_FOR_MISSING_DATA = double.NaN;
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ScalarEncoderExperimental"/> class.
-        /// </summary>
-        /// <param name="encoderSettings">The encoderSettings<see cref="Dictionary{string, object}"/></param>
-        public ScalarEncoder(Dictionary<string, object> encoderSettings)
+
+        public ScalarEncoder(int v1, int v2, int v3, bool v4)
         {
-            this.Initialize(encoderSettings);
+            this.v1 = v1;
+            this.v2 = v2;
+            this.v3 = v3;
+            this.v4 = v4;
         }
 
         /// <summary>
@@ -66,22 +63,12 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public override void AfterInitialize()
         {
-            this.Encoders = null;
-            this.verbosity = verbosity;
-            this.W = W;
             if (W % 2 == 0)
             {
                 throw new ArgumentException("W must be an odd number (to eliminate centering difficulty)");
             }
 
-            this.MinVal = MinVal;
-            this.MaxVal = MaxVal;
-
-            this.Periodic = Periodic;
-            this.ClipInput = ClipInput;
-
-
-            this.HalfWidth = (W - 1) / 2;
+            HalfWidth = (W - 1) / 2;
 
             // For non-periodic inputs, padding is the number of bits "outside" the range,
             // on each side. I.e. the representation of minval is centered on some bit, and
@@ -96,12 +83,25 @@ namespace NeoCortexApi.Encoders
                     throw new ArgumentException("maxVal must be > minVal");
                 }
 
-                this.RangeInternal = (float)(this.MaxVal - this.MinVal);
+                RangeInternal = MaxVal - MinVal;
             }
 
             // There are three different ways of thinking about the representation. Handle
             // each case here.
-            this.InitEncoder(W, MinVal, MaxVal, N, Radius, Resolution);
+            InitEncoder(W, MinVal, MaxVal, N, Radius, Resolution);
+
+            //nInternal represents the output area excluding the possible padding on each side
+            NInternal = N - 2 * Padding;
+
+            if (Name == null)
+            {
+                if ((MinVal % ((int)MinVal)) > 0 ||
+                    (MaxVal % ((int)MaxVal)) > 0)
+                {
+
+                    // There are three different ways of thinking about the representation. Handle
+                    // each case here.
+                    this.InitEncoder(W, MinVal, MaxVal, N, Radius, Resolution);
 
             //NInternal represents the output _area excluding the possible padding on each side
             this.NInternal = this.N - 2 * this.Padding;
