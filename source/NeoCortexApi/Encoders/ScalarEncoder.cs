@@ -348,56 +348,56 @@ namespace NeoCortexApi.Encoders
             {
                 centerbin = (int)((input - MinVal) * NInternal / Range + Padding);
             }
-            if (input == double.NaN)
-                    {
-                        return null;
-                    }
-
-                    int? bucketVal = GetFirstOnBit(input);
-
-                    return bucketVal;
-                }
-               */
-
-        /// <summary>
-        /// Encodes the given scalar value as SDR as defined by HTM.
-        /// </summary>
-        /// <param name="inputData">The inputData<see cref="object"/></param>
-        /// <returns>The <see cref="int[]"/></returns>
-        public override int[] Encode(object inputData)
-        {
-            int[] output = null;
-
-            double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
-            if (input == double.NaN)
+            else
             {
-                return output;
+                centerbin = ((int)(((input - MinVal) + Resolution / 2) / Resolution)) + Padding;
             }
 
-            int? bucketVal = GetFirstOnBit(input);
-            if (bucketVal != null)
-            {
-                output = new int[N];
+            return centerbin - HalfWidth;
+        }
 
-                int bucketIdx = bucketVal.Value;
-                //Arrays.fill(output, 0);
-                var minbin = bucketIdx;
-                var maxbin = minbin + 2 * HalfWidth;
-                if (Periodic)
-                {
-                    if (maxbin >= N)
-                    {
-                        int bottombins = maxbin - N + 1;
-                        int[] range = ArrayUtils.Range(0, bottombins);
-                        ArrayUtils.SetIndexesTo(output, range, 1);
-                        maxbin = N - 1;
-                    }
-                    if (minbin < 0)
-                    {
-                        var topbins = -minbin;
-                        ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(N - topbins, N), 1);
-                        minbin = 0;
-                    }
+
+        /// <summary>
+        /// Gets the bucket index of the given value.
+        /// </summary>
+        /// <param name="inputData">The data to be encoded. Must be of type double.</param>
+        /// <param name="bucketIndex">The bucket index.</param>
+        /// <returns></returns>
+
+        public int? GetBucketIndex(decimal inputData)
+        {
+            if ((double)inputData < MinVal || (double)inputData > MaxVal)
+            {
+                return null;
+            }
+
+            decimal fraction = (decimal)(((double)inputData - MinVal) / (MaxVal - MinVal));
+
+            if (Periodic)
+            {
+                fraction = fraction - Math.Floor(fraction);
+            }
+
+            int bucketIndex = (int)Math.Floor(fraction * N);
+
+            if (bucketIndex == N)
+            {
+                bucketIndex = 0;
+            }
+
+            // For periodic encoders, the center of the first bucket is considered equal to the center of the last bucket
+            if (Periodic && bucketIndex == 0 && Math.Abs((double)inputData - MaxVal) <= 0.0000000000000000000000000001)
+            {
+                bucketIndex = N - 1;
+            }
+
+            // Check if the input value is within the radius of the bucket
+            if (Radius >= 0)
+            {
+                decimal bucketWidth = ((decimal)MaxVal - (decimal)MinVal) / (decimal)N;
+                decimal bucketCenter = (bucketWidth * bucketIndex) + (bucketWidth / 2) + (decimal)MinVal;
+
+                if (Math.Abs((decimal)inputData - bucketCenter) > (decimal)Radius * bucketWidth)
                 }
 
                 ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(minbin, maxbin + 1), 1);
