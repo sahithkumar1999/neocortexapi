@@ -548,57 +548,57 @@ namespace NeoCortexApi.Encoders
 
                     int? bucketVal = GetFirstOnBit(input);
                 List<int> searchStr = Enumerable.Repeat(1, i + 3).ToList();
-                searchStr[0] = 0;
-                searchStr[searchStr.Count - 1] = 0;
-                subLen = searchStr.Count;
+             
+                    return bucketVal;
+                }
+               */
 
-                /// Does this search string appear in the output?
+        /// <summary>
+        /// The Encode
+        /// </summary>
+        /// <param name="inputData">The inputData<see cref="object"/></param>
+        /// <returns>The <see cref="int[]"/></returns>
+        public override int[] Encode(object inputData)
+        {
+            int[] output = null;
 
+            double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
+            if (input == double.NaN)
+            {
+                return output;
+            }
+
+            int? bucketVal = GetFirstOnBit(input);
+            if (bucketVal != null)
+            {
+                output = new int[N];
+
+                int bucketIdx = bucketVal.Value;
+                //Arrays.fill(output, 0);
+                int minbin = bucketIdx;
+                int maxbin = minbin + 2 * HalfWidth;
                 if (Periodic)
                 {
-                    for (int j = 0; j < N; j++)
+                    if (maxbin >= N)
                     {
-                        outputIndices = Enumerable.Range(j, subLen).Select(x => x % N).ToArray();
-                        if (searchStr.SequenceEqual(tmpOutput.Where((value, index) => outputIndices.Contains(index))))
-                        {
-                            for (int k = 0; k < subLen; k++)
-                            {
-                                tmpOutput[outputIndices[k]] = 1;
-                            }
-                        }
+                        int bottombins = maxbin - N + 1;
+                        int[] range = ArrayUtils.Range(0, bottombins);
+                        ArrayUtils.SetIndexesTo(output, range, 1);
+                        maxbin = N - 1;
+                    }
+                    if (minbin < 0)
+                    {
+                        int topbins = -minbin;
+                        ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(N - topbins, N), 1);
+                        minbin = 0;
                     }
                 }
-                else
-                {
-                    for (int j = 0; j < N - subLen + 1; j++)
-                    {
-                        if (searchStr.SequenceEqual(tmpOutput.Skip(j).Take(subLen)))
-                        {
-                            for (int k = 0; k < subLen; k++)
-                            {
-                                tmpOutput[j + k] = 1;
-                            }
-                        }
-                    }
-                }
+
+                ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(minbin, maxbin + 1), 1);
             }
 
-            if (this.verbosity >= 2)
-            {
-                Console.WriteLine("raw output: " + string.Join(",", ((double[])encoded).Take(N).ToArray()));
-                Console.WriteLine("filtered output: " + string.Join(",", tmpOutput));
-            }
-
-
-
-            // Find each run of 1's.
-            nz = Array.FindAll(tmpOutput, x => x != 0);
-            List<(int, int)> runs = new List<(int, int)>(); // will be tuples of (startIdx, runLength)
-            if (nz.Length > 0)
-            {
-                run = new int[] { nz[0], 1 };
-                int i = 1;
-                while (i < nz.Length)
+            // Output 1-D array of same length resulted in parameter N    
+            while (i < nz.Length)
                 {
                     if (nz[i] == run[0] + run[1])
                     {
