@@ -34,11 +34,42 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public override int Width => throw new NotImplementedException();
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ScalarEncoderExperimental"/> class.
-        /// </summary>
-        public ScalarEncoder()
+        public int NumBits { get; private set; }
+        public double PeriodicRadius { get; private set; }
+        public double BucketWidth { get; private set; }
+        public int NumBuckets { get; private set; }
+        public double[] Centers { get; private set; }
+
+
+        public ScalarEncoder(double minValue, double maxValue, int numBits, double period = 0, double periodicRadius = 0)
         {
+            BucketWidth = (maxValue - minValue) / (numBits - (period > 0 ? 2 : 1));
+            this.NumBuckets = numBits - (period > 0 ? 1 : 0);
+            this.NumBits = numBits;
+            this.PeriodicRadius = periodicRadius;
+
+            if (period > 0)
+            {
+                // Calculate the centers for a periodic encoder
+                this.Centers = new double[this.NumBuckets];
+                double halfWidth = this.BucketWidth / 2.0;
+                double periodOffset = period / 2.0;
+                for (int i = 0; i < this.NumBuckets; i++)
+                {
+                    double center = minValue + halfWidth + i * this.BucketWidth;
+                    this.Centers[i] = ((center + periodOffset) % period) - periodOffset;
+                }
+            }
+            else
+            {
+                // Calculate the centers for a non-periodic encoder
+                this.Centers = new double[this.NumBuckets];
+                double halfWidth = this.BucketWidth / 2.0;
+                for (int i = 0; i < this.NumBuckets; i++)
+                {
+                    this.Centers[i] = minValue + halfWidth + i * this.BucketWidth;
+                }
+            }
         }
 
         /// <summary>
@@ -290,6 +321,72 @@ namespace NeoCortexApi.Encoders
         }
 
 
+
+        // EncodeIntoArray method
+        public int[] EncodeIntoArray(double input)
+        {
+            int[] activeBits = new int[this.NumBits];
+
+            if (this.PeriodicRadius > 0)
+            {
+                // Calculate the bucket index for a periodic encoder
+                int bucketIndex = -1;
+                for (int i = 0; i < this.NumBuckets; i++)
+                {
+                    if (Math.Abs(input - this.Centers[i]) <= this.PeriodicRadius)
+                    {
+                        bucketIndex = i;
+                        break;
+                    }
+                }
+
+                // Set active bits
+                if (bucketIndex != -1)
+                {
+                    int startBit = bucketIndex * (this.NumBits / this.NumBuckets);
+                    int endBit = startBit + (this.NumBits / this.NumBuckets) - 1;
+                    if (endBit < activeBits.Length) // Check if endBit is within the bounds of the array
+                    {
+                        for (int i = startBit; i <= endBit; i++)
+                        {
+                            activeBits[i] = 1;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Calculate the bucket index for a non-periodic encoder
+                int bucketIndex = (int)Math.Floor((input - (this.Centers[0] - this.BucketWidth / 2.0)) / this.BucketWidth);
+
+                // Set active bits
+                if (bucketIndex >= 0 && bucketIndex < this.NumBuckets)
+                {
+                    int startBit = bucketIndex;
+                    int endBit = startBit + (this.NumBits / this.NumBuckets) - 1;
+                    if (endBit < activeBits.Length) // Check if endBit is within the bounds of the array
+                    {
+                        for (int i = startBit; i <= endBit; i++)
+                        {
+                            activeBits[i] = 1;
+                        }
+                    }
+                }
+            }
+            return activeBits;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
         /// <summary>
         /// Gets the index of the first non-zero bit.
         /// </summary>
@@ -432,93 +529,10 @@ namespace NeoCortexApi.Encoders
         }
 
 
-        public int EncodeIntoArray(int input, double[] output, int n, bool learn = true)
-        {
 
-            if (input != 0 && !typeof(System.IConvertible).IsAssignableFrom(input.GetType()))
-            {
-                throw new ArgumentException("Expected a scalar input but got input of type " + input.GetType().Name);
-            }
 
-            if ((!Double.IsNaN(input)) && float.IsNaN((float)input))
-            {
-                input = 0;
-            }
+      
 
-            int bucketval = (int)GetFirstOnBit(input);
-            int minbin = this.GetFirstOnBit(input) ?? 0;
-            int? bucketVal = GetFirstOnBit(input);
-            // For periodic encoders, the bucket index is the index of the center bit
-            if (this.Periodic)
-            {
-                // None is returned for missing value
-                for (int i = 0; i < this.N; i++)
-                {
-                    output[i] = 0;
-                }
-                // TODO: should all 1s, or random SDR be returned instead?
-            }
-
-            else
-            {
-                // The bucket index is the index of the first bit to set in the output
-                for (int i = 0; i < this.N; i++)
-                {
-                    output[i] = 0;
-                }
-
-                minbin = (int)bucketVal;
-                int maxbin = minbin + 2 * HalfWidth;
-
-                if (this.Periodic)
-                {
-                    // Handle the edges by computing wrap-around
-                    if (maxbin >= this.N)
-                    {
-                        int bottombins = maxbin - this.N + 1;
-                        for (int i = 0; i < bottombins; i++)
-                        {
-                            output[i] = 1;
-                        }
-                        maxbin = this.N - 1;
-                    }
-
-                    if (minbin < 0)
-                    {
-                        int topbins = -minbin;
-                        for (int i = this.N - topbins; i < this.N; i++)
-                        {
-                            output[i] = 1;
-                        }
-                        minbin = 0;
-                    }
-                }
-
-                Debug.Assert(minbin >= 0);
-                Debug.Assert(maxbin < this.N);
-
-                // Set the output (except for periodic wraparound)
-                for (int i = minbin; i <= maxbin; i++)
-                {
-                    output[i] = 1;
-                }
-            }
-            int verbosity = 0;
-            // Debug the decode() method
-            if (verbosity >= 2)
-            {
-                Console.WriteLine();
-                Console.WriteLine("input: " + input);
-                Console.WriteLine("range: " + MinVal + " - " + MaxVal);
-                Console.WriteLine("n: " + this.N + " w: " + this.W + " resolution: " + this.Resolution +
-                                  " radius: " + this.Radius + " periodic: " + this.Periodic);
-                Console.Write("output: ");
-                PPrint(output);
-                Console.WriteLine("input desc: " + DecodedToStr(Decode(output)));
-            }
-            return 0;
-
-        }
 
         private string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> tuple)
         {

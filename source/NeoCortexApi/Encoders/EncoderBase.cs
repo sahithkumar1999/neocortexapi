@@ -170,6 +170,8 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public int W { get => (int)this["W"]; set => this["W"] = (int)value; }
 
+        
+
         public double MinVal { get => (double)this["MinVal"]; set => this["MinVal"] = (double)value; }
 
         public double MaxVal { get => (double)this["MaxVal"]; set => this["MaxVal"] = (double)value; }

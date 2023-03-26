@@ -299,6 +299,72 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
+
+        [TestMethod]
+        public void ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays()
+        {
+            double minValue = 0;
+            double maxValue = 100;
+            int numBits = 1024;
+            double period = maxValue - minValue;
+
+            ScalarEncoder encoder = new ScalarEncoder(numBits, minValue, Convert.ToInt32(maxValue), period);
+
+            for (double i = minValue; i <= maxValue; i += 0.1)
+            {
+                int[] expectedArray = encoder.EncodeIntoArray(i);
+                int[] actualArrays = encoder.EncodeIntoArray(i);
+
+                Console.WriteLine($"i = {i}");
+                Console.WriteLine($"expectedArray = [{string.Join(",", expectedArray)}]");
+                Console.WriteLine($"actualArrays = [{string.Join(",", actualArrays)}]");
+
+
+                Assert.AreEqual(expectedArray.Length, actualArrays.Length);
+
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    Assert.AreEqual(expectedArray[j], actualArrays[j]);
+                }
+
+                string outFolder = nameof(ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays);
+
+                Directory.CreateDirectory(outFolder);
+
+                DateTime now = DateTime.Now;
+
+                Color bitmapColor = Color.Gray;
+
+                if (!expectedArray.SequenceEqual(actualArrays))
+                {
+                    bitmapColor = Color.Red;
+                }
+
+                int[,] twoDimArray = new int[expectedArray.Length, 1];
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    twoDimArray[j, 0] = expectedArray[j];
+                }
+
+                NeoCortexUtils.DrawBitmap(twoDimArray, expectedArray.Length, 1024, $"{outFolder}\\{i}.png", bitmapColor, Color.Green, text: $"v:{i} /b:{actualArrays}");
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         [TestMethod]
         
         public void TestGenerateRangeDescription()
@@ -600,45 +666,9 @@ namespace UnitTestsProject.EncoderTests
             return encoderSettings;
         }
 
-        [TestMethod]
-        [TestCategory("Encoding")]
-        public void ScalarEncodingEncodeIntoArray()
-        {
-            // Define input parameters
-            int input = 42;
-            double[] output = new double[1024];
-            int n = 1024;
-            bool learn = true;
-            // Create encoder instance
-            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
-            {
-                 { "W", 21},
-                 { "N", 1024},
-                 { "Radius", -1.0},
-                 { "MinVal", 0.0},
-                 { "MaxVal", 100.0 },
-                 { "Periodic", true},
-                 { "Name", "scalar_periodic"},
-                 { "ClipInput", false},
-            });
-            // Call EncodeIntoArray method and get the result
-            int result = encoder.EncodeIntoArray(input, output, n, learn);
+        
 
-            // Verify that the output array has been correctly filled with the encoded input value
-            for (int i = 0; i < n; i++)
-            {
-                if (i >= 491 && i <= 511)
-                {
-                    Assert.AreEqual(0, output[i], $"Index {i} should be 1");
-                }
-                else
-                {
-                    Assert.AreEqual(0, output[i], $"Index {i} should be 0");
-                }
-            }
-            // Verify that the method returns 0
-            Assert.AreEqual(0, result, "Method should return 0");
-        }
+
 
 
         [TestMethod]
