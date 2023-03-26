@@ -298,56 +298,57 @@ namespace NeoCortexApi.Encoders
         /// <exception cref="ArgumentException"></exception>
         protected int? GetFirstOnBit(double input)
         {
-            public int? GetBucketIndex(decimal inputData)
-        {
-            if ((double)inputData < MinVal || (double)inputData > MaxVal)
+            if (input == double.NaN)
             {
                 return null;
             }
-
-            decimal fraction = (decimal)(((double)inputData - MinVal) / (MaxVal - MinVal));
-
-            if (Periodic)
+            else
             {
-                fraction = fraction - Math.Floor(fraction);
-            }
-
-            int bucketIndex = (int)Math.Floor(fraction * N);
-
-            if (bucketIndex == N)
-            {
-                bucketIndex = 0;
-            }
-
-            // For periodic encoders, the center of the first bucket is considered equal to the center of the last bucket
-            if (Periodic && bucketIndex == 0 && Math.Abs((double)inputData - MaxVal) <= 0.0000000000000000000000000001)
-            {
-                bucketIndex = N - 1;
-            }
-
-            // Check if the input value is within the radius of the bucket
-            if (Radius >= 0)
-            {
-                decimal bucketWidth = ((decimal)MaxVal - (decimal)MinVal) / (decimal)N;
-                decimal bucketCenter = (bucketWidth * bucketIndex) + (bucketWidth / 2) + (decimal)MinVal;
-
-                if (Math.Abs((decimal)inputData - bucketCenter) > (decimal)Radius * bucketWidth)
+                if (input < MinVal)
                 {
-                    return null;
+                    if (ClipInput && !Periodic)
+                    {
+                        Debug.WriteLine("Clipped input " + Name + "=" + input + " to minval " + MinVal);
+
+                        input = MinVal;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Input ({input}) less than range ({MinVal} - {MaxVal}");
+                    }
                 }
             }
 
-            return bucketIndex;
-
-        }
-
-
-
-        /*
-                public int? GetBucketIndex(object inputData)
+            if (Periodic)
+            {
+                if (input >= MaxVal)
                 {
-                    double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
-                    if (input == double.NaN)
+                    throw new ArgumentException($"Input ({input}) greater than periodic range ({MinVal} - {MaxVal}");
+                }
+            }
+            else
+            {
+                if (input > MaxVal)
+                {
+                    if (ClipInput)
+                    {
+
+                        Debug.WriteLine($"Clipped input {Name} = {input} to maxval MaxVal");
+                        input = MaxVal;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Input ({input}) greater than periodic range ({MinVal} - {MaxVal}");
+                    }
+                }
+            }
+
+            int centerbin;
+            if (Periodic)
+            {
+                centerbin = (int)((input - MinVal) * NInternal / Range + Padding);
+            }
+            if (input == double.NaN)
                     {
                         return null;
                     }
