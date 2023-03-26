@@ -497,9 +497,14 @@ namespace NeoCortexApi.Encoders
                 Debug.Assert(minbin >= 0);
                 Debug.Assert(maxbin < this.N);
 
-                // Set the output (except for periodic wraparound)
-                // Debug the decode() method
-                if (verbosity >= 2)
+                for (int i = minbin; i <= maxbin; i++)
+                {
+                    output[i] = 1;
+                }
+            }
+            int verbosity = 0;
+            // Debug the decode() method
+            if (verbosity >= 2)
             {
                 Console.WriteLine();
                 Console.WriteLine("input: " + input);
@@ -514,40 +519,34 @@ namespace NeoCortexApi.Encoders
 
         }
 
+        private string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> tuple)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void PPrint(double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
         private Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> Decode(double[] output)
         {
             throw new NotImplementedException();
         }
 
-       
-        public int Decode(object encoded,string parentFieldName = "")
-        {
-            (int[], (Dictionary<string, object>, List<object>)) Encode(int input)
-            {
-                double[] encodedArray = EncodeIntoArray(input);
-                /// For now, we simply assume any top-down output greater than 0
-                /// is ON. Eventually, we will probably want to incorporate the strength
-                /// of each top-down output.
-                tmpOutput = encodedArray.Take(N).Select(x => Convert.ToInt32(x > 0)).ToArray();
-                if (!tmpOutput.Any())
+
+
+
+        /*
+                public int? GetBucketIndex(object inputData)
                 {
-                    return (new int[0], (new Dictionary<string, object>(), new List<object>()));
-                }
+                    double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
+                    if (input == double.NaN)
+                    {
+                        return null;
+                    }
 
-                var result = (tmpOutput, (new Dictionary<string, object>(), new List<object>()));
-                return result;
-            }
-            
-
-
-            // First, assume the input pool is not sampled 100%, and fill in the
-            // "holes" in the encoded representation (which are likely to be present
-            // if this is a coincidence that was learned by the SP).
-
-            // Search for portions of the output that have "holes"
-            maxZerosInARow = HalfWidth;
-            for (int i = 0; i < maxZerosInARow; i++)
-            {
+                    int? bucketVal = GetFirstOnBit(input);
                 List<int> searchStr = Enumerable.Repeat(1, i + 3).ToList();
                 searchStr[0] = 0;
                 searchStr[searchStr.Count - 1] = 0;
@@ -1008,7 +1007,7 @@ namespace NeoCortexApi.Encoders
 
        */
 
-       
+
 
         public override void EncodeIntoArray(object inputData, double[] output)
         {
