@@ -398,36 +398,38 @@ namespace NeoCortexApi.Encoders
                 decimal bucketCenter = (bucketWidth * bucketIndex) + (bucketWidth / 2) + (decimal)MinVal;
 
                 if (Math.Abs((decimal)inputData - bucketCenter) > (decimal)Radius * bucketWidth)
+                {
+                    return null;
                 }
-
-                ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(minbin, maxbin + 1), 1);
             }
 
-            // Output 1-D array of same length resulted in parameter N    
-            return output;
+            return bucketIndex;
+
         }
-            
 
-
-        /// <summary>
-        /// This method enables running in the network.
-        /// </summary>
-        /// <param name="inputData"></param>
-        /// <param name="learn"></param>
-        /// <returns></returns>
-        public int Compute(object inputData, bool learn, int v)
+        public string GenerateRangeDescription(List<Tuple<double, double>> ranges)
         {
-            ScalarEncoder encoder = new ScalarEncoder();
-            return v;
+            var desc = "";
+            var numRanges = ranges.Count;
+            for (var i = 0; i < numRanges; i++)
+            {
+                if (ranges[i].Item1 != ranges[i].Item2)
+                {
+                    desc += $"{ranges[i].Item1:F2}-{ranges[i].Item2:F2}";
+                }
+                else
+                {
+                    desc += $"{ranges[i].Item1:F2}";
+                }
+
+                if (i < numRanges - 1)
+                {
+                    desc += ", ";
+                }
+            }
+
+            return desc;
         }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns>The <see cref="List{T}"/></returns>
-        ///  Vinay
-        
-       
 
 
         public int EncodeIntoArray(int input, double[] output, int n, bool learn = true)
@@ -442,13 +444,11 @@ namespace NeoCortexApi.Encoders
             {
                 input = 0;
             }
-            bucketVal = (int)GetFirstOnBit(input);
 
-            if (bucketVal == 0)
+            int bucketval = (int)GetFirstOnBit(input);
+            int minbin = this.GetFirstOnBit(input) ?? 0;
+            int? bucketVal = GetFirstOnBit(input);
             {
-                // None is returned for missing value
-                for (int i = 0; i < this.N; i++)
-                {
                     output[i] = 0;
                 }
                 // TODO: should all 1s, or random SDR be returned instead?
