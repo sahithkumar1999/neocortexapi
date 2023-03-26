@@ -248,57 +248,57 @@ namespace NeoCortexApi.Encoders
                 {
                     List<int> input2 = new List<int>();
 
-
-                    /// <summary>
-                    /// Gets the bucket index of the given value.
-                    /// </summary>
-                    /// <param name="inputData">The data to be encoded. Must be of type double.</param>
-                    /// <param name="bucketIndex">The bucket index.</param>
-                    /// <returns></returns>
-                    public int? GetBucketIndex(object inputData)
-        {
-            double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
-
-            
-
-            if (input == double.NaN)
-            {
-                return null;
+                    foreach (int val in input)
+                    {
+                        if (val <= maxVal)
+                        {
+                            input2.Add(val);
+                        }
+                    }
+                    input = input2;
+                    input2 = new List<int>();
+                    foreach (int val in input)
+                    {
+                        if (val >= minVal)
+                        {
+                            input2.Add(val);
+                        }
+                    }
+                    input = input2;
+                }
             }
-
-           // minbin = this.GetFirstOnBit(input) ?? 0;
-            int? bucketVal = GetFirstOnBit(input);
-
-            return bucketVal;
-            //// For periodic encoders, the bucket index is the index of the center bit
-            //if (this.Periodic)
-            //{
-            //    bucketVal = minbin + this.HalfWidth;
-            //    if (bucketVal < 0)
-            //    {
-            //        bucketVal += this.N;
-            //    }
-            //    else
-            //    {
-            //        /// for non-periodic encoders, the bucket index is the index of the left bit
-            //        bucketVal = minbin;
-            //    }
-            //    return bucketVal;
-            //}
-            //return 0;
+            return input.ToArray();
         }
-       
+
+        private static double map(double val, double fromMin, double fromMax, double toMin, double toMax)
+        {
+            return (val - fromMin) * (toMax - toMin) / (fromMax - fromMin) + toMin;
+        }
+
+        private static int wrap(int val, int minVal, int maxVal)
+        {
+            int range = maxVal - minVal + 1;
+            while (val < minVal)
+            {
+                val += range;
+            }
+            while (val > maxVal)
+            {
+                val -= range;
+            }
+            return val;
+        }
 
 
         /// <summary>
-        /// Gets the bucket index of the given value.
+        /// Gets the index of the first non-zero bit.
         /// </summary>
-        /// <param name="inputData">The data to be encoded. Must be of type double.</param>
-        /// <param name="bucketIndex">The bucket index.</param>
-        /// <returns></returns>
-
-
-        public int? GetBucketIndex(decimal inputData)
+        /// <param name="input"></param>
+        /// <returns>Null in a case of an error.</returns>
+        /// <exception cref="ArgumentException"></exception>
+        protected int? GetFirstOnBit(double input)
+        {
+            public int? GetBucketIndex(decimal inputData)
         {
             if ((double)inputData < MinVal || (double)inputData > MaxVal)
             {
