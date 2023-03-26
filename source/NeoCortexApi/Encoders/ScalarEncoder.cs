@@ -1,18 +1,14 @@
 ﻿// Copyright (c) Damir Dobric. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 using NeoCortexApi.Entities;
-using NumSharp;
 using NeoCortexApi.Utility;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Xml;
 using System.Linq;
-using System.Numerics;
-
-
+using System.Xml.Linq;
 
 namespace NeoCortexApi.Encoders
 {
@@ -23,6 +19,11 @@ namespace NeoCortexApi.Encoders
     /// </summary>
     public class ScalarEncoder : EncoderBase
     {
+        private int v1;
+        private int v2;
+        private int v3;
+        private bool v4;
+
         /// <summary>
         /// Gets a value indicating whether IsDelta
         /// </summary>
@@ -33,22 +34,20 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public override int Width => throw new NotImplementedException();
 
-        //public int halfwidth { get; private set; }
-        public static object DEFAULT_RADIUS { get; private set; }
-        public static object DEFAULT_RESOLUTION { get; private set; }
-        public static object ScalarEncoderProto { get; private set; }
-        public int[] tmpOutput { get; private set; }
-
-        public int GetWidth()
-        {
-            return this.N;
-        }
-
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ScalarEncoderExperimental"/> class.
         /// </summary>
         public ScalarEncoder()
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScalarEncoderExperimental"/> class.
+        /// </summary>
+        /// <param name="encoderSettings">The encoderSettings<see cref="Dictionary{string, object}"/></param>
+        public ScalarEncoder(Dictionary<string, object> encoderSettings)
+        {
+            this.Initialize(encoderSettings); public ScalarEncoder()
         {
 
         }
