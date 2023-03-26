@@ -448,7 +448,12 @@ namespace NeoCortexApi.Encoders
             int bucketval = (int)GetFirstOnBit(input);
             int minbin = this.GetFirstOnBit(input) ?? 0;
             int? bucketVal = GetFirstOnBit(input);
+            // For periodic encoders, the bucket index is the index of the center bit
+            if (this.Periodic)
             {
+                // None is returned for missing value
+                for (int i = 0; i < this.N; i++)
+                {
                     output[i] = 0;
                 }
                 // TODO: should all 1s, or random SDR be returned instead?
@@ -462,7 +467,7 @@ namespace NeoCortexApi.Encoders
                     output[i] = 0;
                 }
 
-                int minbin = (int)bucketVal;
+                minbin = (int)bucketVal;
                 int maxbin = minbin + 2 * HalfWidth;
 
                 if (this.Periodic)
@@ -493,13 +498,8 @@ namespace NeoCortexApi.Encoders
                 Debug.Assert(maxbin < this.N);
 
                 // Set the output (except for periodic wraparound)
-                for (int i = minbin; i <= maxbin; i++)
-                {
-                    output[i] = 1;
-                }
-            }
-            // Debug the decode() method
-            if (verbosity >= 2)
+                // Debug the decode() method
+                if (verbosity >= 2)
             {
                 Console.WriteLine();
                 Console.WriteLine("input: " + input);
