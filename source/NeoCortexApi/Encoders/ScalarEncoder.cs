@@ -802,6 +802,18 @@ namespace NeoCortexApi.Encoders
             return new double[] { bucketLowerBound, bucketUpperBound };
         }
 
+
+        /// <summary>
+        /// This is a method that returns an array of binary values representing the mapping of an input value to a set of buckets. 
+        /// The mapping is determined by whether the input value falls within a given bucket or not. The method takes into account 
+        /// whether the encoder is periodic or not, and the number of buckets used. If the encoder is periodic, the method calculates 
+        /// the bucket width and index based on the input value, while if the encoder is non-periodic, it calculates the radius and 
+        /// bucket width, and uses these to determine the bucket index and mapping.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="Periodic"></param>
+        /// <param name="numBuckets"></param>
+        /// <returns></returns>
         public int[] _getTopDownMapping(double input, bool Periodic, int numBuckets)
         {
             int[] mapping = new int[numBuckets];
