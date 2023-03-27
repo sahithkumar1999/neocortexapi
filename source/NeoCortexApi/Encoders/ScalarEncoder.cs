@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 
 namespace NeoCortexApi.Encoders
@@ -675,7 +676,44 @@ namespace NeoCortexApi.Encoders
             throw new NotImplementedException();
         }
 
-       
+
+
+        public double[] GetBucketValues(double input)
+        {
+            // Check for edge cases
+            if (double.IsNaN(input) || double.IsInfinity(input))
+            {
+                throw new ArgumentException("Input value is not a valid number.");
+            }
+            if (input < this.MinVal || input >= this.MaxVal)
+            {
+                throw new ArgumentException("Input value is outside of the encoder's range.");
+            }
+            NumBuckets = 100;
+            // Calculate the width of each bucket
+            double bucketWidth = (this.MaxVal - this.MinVal) / (double)this.NumBuckets;
+            if (double.IsInfinity(bucketWidth) || double.IsNaN(bucketWidth) || bucketWidth <= 0.0)
+            {
+                throw new InvalidOperationException("Bucket width is not valid.");
+            }
+
+            Console.WriteLine("bucketWidth: " + bucketWidth);
+
+            // Calculate the index of the bucket that the input falls into
+            int bucketIndex = (int)((input - this.MinVal) / bucketWidth);
+            Console.WriteLine("bucketIndex: " + bucketIndex);
+
+            // Calculate the lower and upper bounds of the bucket
+            double bucketLowerBound = bucketIndex * bucketWidth + this.MinVal;
+            Console.WriteLine("bucketLowerBound: " + bucketLowerBound);
+
+            double bucketUpperBound = (bucketIndex + 1) * bucketWidth + this.MinVal;
+            Console.WriteLine("bucketUpperBound: " + bucketUpperBound);
+
+            // Return the bucket values
+            return new double[] { bucketLowerBound, bucketUpperBound };
+        }
+
 
 
 

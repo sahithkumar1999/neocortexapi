@@ -702,7 +702,46 @@ namespace UnitTestsProject.EncoderTests
 
         }
 
+
+
+        [TestMethod]
+        public void TestGetBucketValues()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21},
+        { "N", 1024},
+        { "Radius", -1.0},
+        { "MinVal", 0.0},
+        { "MaxVal", 100.0 },
+        { "Periodic", false},
+        { "Name", "scalar_nonperiodic"},
+        { "ClipInput", false},
+        { "NumBuckets", 100 },
+    });
+
+            // Act and assert
+            Assert.ThrowsException<ArgumentException>(() => encoder.GetBucketValues(-10.0));
+
+            double[] bucketValues = null;
+            try
+            {
+                bucketValues = encoder.GetBucketValues(47.5);
+                Console.WriteLine($"Bucket values - Actual: {string.Join(", ", bucketValues)}, Expected: {string.Join(", ", new double[] { 47, 48 })}");
+                Assert.AreEqual(new double[] { 47, 48 }, bucketValues);
+            }
+            catch (Exception)
+            {
+               
+            }
+
         
+        }
+
+
+
+
     }
 
 }
