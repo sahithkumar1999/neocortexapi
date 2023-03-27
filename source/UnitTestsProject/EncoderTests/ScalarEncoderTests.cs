@@ -140,7 +140,6 @@ namespace UnitTestsProject.EncoderTests
 
             Debug.WriteLine(NeoCortexApi.Helpers.StringifyVector(result));
             Debug.WriteLine(NeoCortexApi.Helpers.StringifyVector(expectedResult));
-            //}          
 
             Assert.IsTrue(expectedResult.SequenceEqual(result));
         }
