@@ -1,18 +1,31 @@
-// Copyright (c) Damir Dobric. All rights reserved.
+﻿// Copyright (c) Damir Dobric. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 using NeoCortexApi.Entities;
 using NeoCortexApi.Utility;
+using NeoCortexEntities.NeuroVisualizer;
+using NumSharp.Utilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Reflection.Emit;
+using System.Runtime.ConstrainedExecution;
+using System.Security.Cryptography;
 using System.Text;
+using System.Xml.Linq;
+using static Numpy.np;
+using static System.Net.WebRequestMethods;
+
+
 
 namespace NeoCortexApi.Encoders
 {
     /// <summary>
     /// Base class for all encoders.
     /// </summary> 
+    /// 
     public abstract class EncoderBase : IHtmModule, ISerializable
     {
         /// <summary>
@@ -51,7 +64,8 @@ namespace NeoCortexApi.Encoders
         // Moved to MultiEncoder.
         //protected Dictionary<EncoderTuple, List<EncoderTuple>> encoders;
         protected List<String> scalarNames;
-        private object[] encoders;
+        private int offset;
+        private object encoder;
 
         /// <summary>
         /// Default constructor.
@@ -89,6 +103,10 @@ namespace NeoCortexApi.Encoders
                 Radius = -1.0;
                 Periodic = false;
                 ClipInput = false;
+                verbosity = 0;
+                forced = false;
+
+
 
                 foreach (var item in encoderSettings)
                 {
@@ -134,12 +152,42 @@ namespace NeoCortexApi.Encoders
             }
         }
 
-   
+        public object retVal
+        {
+            get { return (int[])this["retVal"]; }
+            set { this["retVal"] = value; }
+        }
 
+
+
+
+        public int numBuckets { get => (int)this["numBuckets"]; set => this["numBuckets"] = value; }
+        public double[][] mappingM;
+
+        public int[] outputIndices
+        {
+            get { return (int[])this["outputIndices"]; }
+            set { this["outputIndices"] = value; }
+        }
+
+        public int[] run
+        {
+            get { return (int[])this["run"]; }
+            set { this["run"] = value; }
+        }
+
+        public int[] nz
+        {
+            get { return (int[])this["nz"]; }
+            set { this["nz"] = value; }
+        }
         /// <summary>
         /// In real cortex mode, W must be >= 21. Empirical value.
         /// </summary>
         public bool IsRealCortexModel { get => (bool)this["IsRealCortexModel"]; set => this["IsRealCortexModel"] = (bool)value; }
+
+        public bool forced { get => (bool)this["forced"]; set => this["forced"] = (bool)value; }
+
 
         /// <summary>
         /// The width of output vector of encoder. 
@@ -147,30 +195,39 @@ namespace NeoCortexApi.Encoders
         /// </summary>
 
         public int N { get => (int)this["N"]; set => this["N"] = (int)value; }
-        
-        public int Verbosity { get => (int)this["Verbosity"]; set => this["Verbosity"] = (int)value; }
-        
-        public int startIdx { get => (int)this["startIdx"]; set => this["startIdx"] = (int)value; }
-        public int runLength { get => (int)this["runLength"]; set => this["runLength"] = (int)value; }
-        public bool [] tmpOutput { get => (bool[])this["tmpOutput"]; set => this["tmpOutput"] = (bool[])value; }
 
-        
-        public double run { get => (double)this["run"]; set => this["run"] = (double)value; }
-        /// <summary>
-        /// public double nz { get => (double)this["nz"]; set => this["nz"] = (double)value; }
-        /// </summary>
-        public double runs { get => (double)this["runs"]; set => this["runs"] = (double)value; }
-
-
+        public int verbosity { get => (int)this["verbosity"]; set => this["verbosity"] = (int)value; }
 
         public int NInternal { get => (int)this["NInternal"]; set => this["NInternal"] = (int)value; }
 
+        public int subLen { get => (int)this["subLen"]; set => this["subLen"] = (int)value; }
+
+
+        public int maxZerosInARow { get => (int)this["maxZerosInARow"]; set => this["maxZerosInARow"] = (int)value; }
         /// <summary>
         /// Number of bits set on one, which represents single encoded value.
         /// </summary>
         public int W { get => (int)this["W"]; set => this["W"] = (int)value; }
 
-        
+
+        public int Start { get => (int)this["Start"]; set => this["Start"] = (int)value; }
+
+        public int runLen { get => (int)this["runLen"]; set => this["runLen"] = (int)value; }
+        public int left { get => (int)this["left"]; set => this["left"] = (int)value; }
+
+        public double inMin { get => (double)this["inMin"]; set => this["inMin"] = (double)value; }
+
+        public string fieldName { get => (string)this["fieldName"]; set => this["fieldName"] = (string)value; }
+
+        public double inMax { get => (double)this["inMax"]; set => this["inMax"] = (double)value; }
+
+        public int right { get => (int)this["right"]; set => this["right"] = (int)value; }
+
+        //This matrix is used for the topDownCompute. We build it the first time
+        //topDownCompute is called
+        public int _topDownMappingM { get => (int)this["_topDownMappingM"]; set => this["_topDownMappingM"] = (int)value; }
+
+        public int _topDownValues { get => (int)this["_topDownValues"]; set => this["_topDownValues"] = (int)value; }
 
         public double MinVal { get => (double)this["MinVal"]; set => this["MinVal"] = (double)value; }
 
@@ -181,6 +238,9 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public double Radius { get => (double)this["Radius"]; set => this["Radius"] = (double)value; }
 
+        public double bucketVal { get => (double)this["bucketVal"]; set => this["bucketVal"] = (double)value; }
+
+       
         /// <summary>
         /// How many input values are embedded in the single encoding bit. Res = (max-min)/N.
         /// </summary>
@@ -205,24 +265,45 @@ namespace NeoCortexApi.Encoders
         public int Offset { get => (int)this["Offset"]; set => this["Offset"] = value; }
 
 
-        public double RangeInternal { get => rangeInternal; set => this.rangeInternal = value; }
+        public double RangeInternal { get => RangeInternal; set => this.RangeInternal = value; }
 
         //public int NumOfBits { get => m_NumOfBits; set => this.m_NumOfBits = value; }     
 
-        public int HalfWidth { get => halfWidth; set => this.halfWidth = value; }
+        public int HalfWidth { get => HalfWidth; set => this.HalfWidth = value; }
 
+        public int minbin { get => (int)this["minbin"]; set => this["minbin"] = value; }
 
+        public int maxbin { get => (int)this["maxbin"]; set => this["maxbin"] = value; }
         ///<summary>
         /// Gets the output width, in bits.
         ///</summary>
         public abstract int Width { get; }
 
 
+
+
+        public struct EncoderResult
+        {
+            public object Value { get; }
+            public object Scalar { get; }
+            public object Encoding { get; }
+
+            public EncoderResult(object value, object scalar, object encoding)
+            {
+                Value = value;
+                Scalar = scalar;
+                Encoding = encoding;
+            }
+        }
+
+        
+
+
         /// <summary>
         /// Returns true if the underlying encoder works on deltas
         /// </summary>
         public abstract bool IsDelta { get; }
-        public (object name, object enc, object offset) encoder { get; private set; }
+        public object Encoders { get; private set; }
         #endregion
 
         /// <summary>
@@ -242,12 +323,8 @@ namespace NeoCortexApi.Encoders
         /// <returns>The <see cref="int[]"/></returns>
         //public abstract int[] Encode(object inputData);
 
-        public IModuleData Compute(int[] input, bool learn)
-        {
-            var result = Encode(input);
 
-            return null;
-        }
+       
 
         /// <summary>
         /// Returns a list of items, one for each bucket defined by this encoder. Each item is the value assigned to that bucket, this is the same as the
@@ -257,7 +334,7 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         /// <typeparam name="T">class type parameter so that this method can return encoder specific value types</typeparam>
         /// <returns>list of items, each item representing the bucket value for that bucket.</returns>
-        public abstract List<T> GetBucketValues<T>();
+        
 
         /// <summary>
         /// Returns an array containing the sum of the right applied multiplications of each slice to the array passed in.
@@ -278,7 +355,300 @@ namespace NeoCortexApi.Encoders
             }
             return retVal;
         }
+        /*public class EncoderResult
+        {
+            // TODO: Define the `EncoderResult` class
+        }*/
 
+        public List<EncoderResult> GetBucketInfo(List<int> buckets)
+        {
+            // Fall back topdown compute
+            if (Encoders == null)
+            {
+                throw new InvalidOperationException("Must be implemented in sub-class");
+            }
+
+            // Concatenate the results from bucketInfo on each child encoder
+            List<EncoderResult> retVals = new List<EncoderResult>();
+            int bucketOffset = 0;
+            for (int i = 0; i < Encoders.Count; i++)
+            {
+                string s = Convert.ToString(i);
+                EncoderInfo encoderInfo = Encoders[s];
+                IEncoder encoder = (IEncoder)encoderInfo.encoder;
+                int offset = encoderInfo.offset;
+                string name = encoderInfo.Name;
+                //(string name, IEncoder encoder, int offset) = Encoders[i];
+
+                int nextBucketOffset;
+                if (encoder.Encoders != null)
+                {
+                    nextBucketOffset = bucketOffset + ((Array)encoder.Encoders).Length;
+
+                }
+                else
+                {
+                    nextBucketOffset = bucketOffset + 1;
+                }
+
+                List<int> bucketIndices = buckets.GetRange(bucketOffset, nextBucketOffset - bucketOffset);
+                List<EncoderResult> values = encoder.GetBucketInfo(bucketIndices);
+
+                retVals.AddRange(values);
+
+                bucketOffset = nextBucketOffset;
+            }
+
+            return retVals;
+        }
+        public abstract void EncodeIntoArray(object inputData, double[] output);
+       
+
+        public int GetWidth()
+        {
+            // TODO: Return the appropriate width value
+            throw new NotImplementedException();
+        }
+
+        private Type defaultDtype = typeof(double);
+
+
+        /// <summary>
+        ///     Encodes inputData and puts the encoded value into the numpy output array,
+        ///         which is a 1-D array of length returned by :meth:`.getWidth`.
+        ///     .. note:: The numpy output array is reused, so clear it before updating it.
+        ///     :param inputData: Data to encode. This should be validated by the encoder.
+        ///     :param output: numpy 1-D array of same length returned by
+        ///                :meth:`.getWidth`.
+        /// </summary>
+        /// <param name="inputData"></param>
+        /// <param name="output"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        public void EncodeIntoArray(object inputData, Array output)
+        {
+            
+            throw new NotImplementedException();
+        }
+
+        public virtual List<(string name, int offset)> GetDescription()
+        {
+            throw new NotImplementedException("GetDescription must be implemented by all subclasses");
+        }
+
+
+
+        /// <summary>
+        ///     Pretty-print a header that labels the sub-fields of the encoded
+        ///         output. This can be used in conjuction with :meth:`.pprint`.
+        ///      :param prefix: printed before the header if specified   
+        /// </summary>
+        /// <param name="output"></param>
+        /// <param name="prefix"></param>
+
+        public void PPrint(double[] output, string prefix = "")
+        {
+            Console.Write(prefix);
+            var description = this.GetDescription().Concat(new List<(string, int)> { ("end", this.GetWidth()) }).ToList();
+
+            for (int i = 0; i < description.Count - 1; i++)
+            {
+                int offset = description[i].Item2;
+                int nextoffset = description[i + 1].Item2;
+                Console.Write($" {bitsToString(output, offset, nextoffset)} |");
+            }
+
+            Console.WriteLine();
+        }
+
+       
+
+
+
+
+        public static string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> decodeResults)
+        {
+            ///    Return a pretty print string representing the return value from
+            ///        :meth:`.decode`.
+
+
+            var fieldsDict = decodeResults.Item1;
+            var fieldsOrder = decodeResults.Item2;
+            var desc = "";
+
+            foreach (var fieldName in fieldsOrder)
+            {
+                var ranges = fieldsDict[fieldName].Item1;
+                var rangesStr = fieldsDict[fieldName].Item2;
+                if (desc.Length > 0)
+                {
+                    desc += $", {fieldName}:";
+                }
+                else
+                {
+                    desc += $"{fieldName}:";
+                }
+
+                desc += $"[{rangesStr}]";
+            }
+
+            return desc;
+        }
+
+        private string bitsToString(double[] output, int start, int end)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = start; i < end; i++)
+            {
+                sb.Append(output[i] > 0.5 ? "1" : "0");
+            }
+
+            return sb.ToString();
+        }
+
+
+        public double[] ClosenessScores(int[] expValues, int[] actValues, bool fractional = true)
+        {
+            /// Compute closeness scores between the expected scalar value(s) and actual
+            /// scalar value(s). The expected scalar values are typically those obtained
+            /// from the :meth:`.getScalars` method.The actual scalar values are typically
+            /// those returned from: meth:`.topDownCompute`.
+
+            /// This method returns one closeness score for each value in expValues (or
+            /// actValues which must be the same length). The closeness score ranges from
+            /// 0 to 1.0, 1.0 being a perfect match and 0 being the worst possible match.
+
+            ///If this encoder is a simple, single field encoder, then it will expect
+            ///just 1 item in each of the ``expValues`` and ``actValues`` arrays.
+            ///Multi - encoders will expect 1 item per sub - encoder.
+
+            ///Each encoder type can define it's own metric for closeness. For example,
+            ///a category encoder may return either 1 or 0, if the scalar matches exactly
+            ///or not.A scalar encoder might return a percentage match, etc.
+
+            ///:param expValues: Array of expected scalar values, typically obtained from
+            ///         :meth:`.getScalars`
+            ///  :param actValues: Array of actual values, typically obtained from
+            ///         :meth:`.topDownCompute`
+
+            ///   :return: Array of closeness scores, one per item in expValues(or
+            ///  actValues).
+
+            // Fallback closeness is a percentage match
+            if (Encoders == null)
+            {
+                double err = Math.Abs(expValues[0] - actValues[0]);
+                if (fractional)
+                {
+                    double denom = Math.Max(expValues[0], actValues[0]);
+                    if (denom == 0)
+                    {
+                        denom = 1.0;
+                    }
+                    double closeness = 1.0 - err / denom;
+                    if (closeness < 0)
+                    {
+                        closeness = 0;
+                    }
+                    return new double[] { closeness };
+                }
+                else
+                {
+                    return new double[] { err };
+                }
+            }
+
+            var scalarIdx = 0;
+            var retVals = new double[] { };
+            foreach (var (name, encoder, offset) in Encoders)
+            {
+                var values = encoder.ClosenessScores(expValues.Skip(scalarIdx).ToArray(), actValues.Skip(scalarIdx).ToArray(), fractional);
+                scalarIdx += values.Length;
+                retVals = retVals.Concat(values).ToArray();
+            }
+
+            return retVals;
+        }
+
+
+
+
+        public List<EncoderResult> TopDownCompute(BitArray encoded)
+        {
+
+
+            ///Returns a list of :class:`.EncoderResult` namedtuples describing the
+            ///top - down best guess inputs for each sub-field given the encoded output.
+        
+            ///These are the values which are most likely to generate the given encoded
+        
+            ///output.To get the associated field names for each of the values, call
+            /// :meth:`.getScalarNames`.
+
+            ///    :param encoded: The encoded output.Typically received from the topDown
+            ///        outputs
+            ///                                              from the spatial pooler just above us.
+        
+            /// :return: A list of:class:`.EncoderResult`
+
+            // Fallback topdown compute
+            if (this.Encoders == null)
+            {
+                throw new InvalidOperationException("Must be implemented in sub-class");
+            }
+
+            // Concatenate the results from topDownCompute on each child encoder
+            List<EncoderResult> retVals = new List<EncoderResult>();
+            for (int i = 0; i < this.Encoders.Count; i++)
+            {
+                /*
+                LinkedListNode<(string name, Encoder encoder, int offset)> node = this.Encoders.First;
+                for (int j = 0; j < i; j++)
+                {
+                    node = node.Next;
+                }
+                (string name, Encoder encoder, int offset) = node.Value;
+                */
+
+
+                var (name, encoder, offset) = this.encoders[i];
+
+                int nextOffset = i < this.Encoders.Count - 1 ? this.Encoders[i + 1].Offset : this.Width;
+
+                var fieldOutput = encoded.Slice(offset, nextOffset - offset);
+                var values = encoder.TopDownCompute(fieldOutput);
+
+                if (values is IEnumerable<EncoderResult>)
+                {
+                    retVals.AddRange(values);
+                }
+                else
+                {
+                    retVals.Add(values);
+                }
+            }
+
+            return retVals;
+        }
+
+
+        public int[] RightVecProd(int[][] matrix, int[] vector)
+        {
+            int[] result = new int[matrix.Length];
+
+            for (int i = 0; i < matrix.Length; i++)
+            {
+                int sum = 0;
+
+                for (int j = 0; j < matrix[i].Length; j++)
+                {
+                    sum += matrix[i][j] * vector[j];
+                }
+
+                result[i] = sum;
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Returns the rendered similarity matrix for the whole rage of values between min and max.
@@ -312,6 +682,8 @@ namespace NeoCortexApi.Encoders
             return sb.ToString() + results;
         }
 
+        public abstract List<T> GetBucketValues<T>();
+        
         public override bool Equals(object obj)
         {
             var encoder = obj as EncoderBase;
@@ -362,18 +734,31 @@ namespace NeoCortexApi.Encoders
             return HtmSerializer.DeserializeObject<T>(sr, name, excludeMembers);
         }
 
-        /*
-
-        public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
+        public bool Equals(IHtmModule other)
         {
-            // Fallback closenss is a percentage match
-            if (this.encoders == null)
+            return this.Equals((object)other);
+        }
+        public double[] ClosenessScores(double[] expValues1, double[] actValues1)
+        {
+            throw new NotImplementedException();
+        }
+        public double[] ClosenessScores(double[] expValues2, double[] actValues2, bool v)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static double[] ClosenessScores(double[] expValues, double[] actValues, Encoder encoder, bool fractional = true)
+        {
+            if (encoder != null)
             {
-                double err = Math.Abs(expValues[0] - actValues[0]);
+                double expValue = expValues[0];
+                double actValue = actValues[0];
+                double err = Math.Abs(expValue - actValue);
                 double closeness;
+
                 if (fractional)
                 {
-                    double denom = Math.Max(expValues[0], actValues[0]);
+                    double denom = Math.Max(expValue, actValue);
                     if (denom == 0)
                     {
                         denom = 1.0;
@@ -388,30 +773,33 @@ namespace NeoCortexApi.Encoders
                 {
                     closeness = err;
                 }
+
                 return new double[] { closeness };
             }
+            // Multi-encoder
+            // Implementation of closeness scores for multi-encoders goes here
+            // ...
 
-            // Concatenate the results from closeness scores on each child encoder
-            int scalarIdx = 0;
-            List<double> retVals = new List<double>();
-            foreach (var encoder in this.encoders)
+            return null;
+        }
+
+
+            public static implicit operator EncoderInfo((object encoder, int offset) v)
             {
-                var (name, enc, offset) = this.encoder;
-                double[] values = enc.ClosenessScores(expValues.Skip(scalarIdx).ToArray(), actValues.Skip(scalarIdx).ToArray(), fractional);
-                scalarIdx += values.Length;
-                retVals.AddRange(values);
+                throw new NotImplementedException();
             }
-            return retVals.ToArray();
         }
-        */
-        public bool Equals(IHtmModule other)
+
+        public override int GetHashCode()
         {
-            return this.Equals((object)other);
+            throw new NotImplementedException();
         }
 
-        
-
-
-
+        double[] ISerializable.Encode(object inputData)
+        {
+            throw new NotImplementedException();
+        }
     }
+
+    
 }
