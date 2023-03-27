@@ -515,7 +515,15 @@ namespace NeoCortexApi.Encoders
 
         }
 
-
+        /// <summary>
+        /// This code calculates bucket information for a scalar value based on the provided encoder parameters. 
+        /// It first clips the input value to the specified range, calculates the bucket index and center, and then 
+        /// calculates the bucket bounds. It also handles periodic encoding by wrapping the bucket index and choosing 
+        /// the closest edge as the bucket center. The function returns an integer array containing the bucket index, 
+        /// the rounded bucket center, and the rounded bucket start and end points.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         public int[] GetBucketInfo(double input)
         {
             // Clip input to range
@@ -578,6 +586,8 @@ namespace NeoCortexApi.Encoders
 
             return new int[] { bucketIndex, (int)Math.Round(bucketCenter), (int)Math.Round(bucketStart), (int)Math.Round(bucketEnd) };
         }
+
+
 
         /// <summary>
         /// This method takes a list of ranges and returns a string that describes them.

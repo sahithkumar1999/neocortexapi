@@ -23,6 +23,7 @@ using Org.BouncyCastle.Crypto;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
 using System.Text;
 using static SkiaSharp.SKImageFilter;
+using LearningFoundation;
 
 namespace UnitTestsProject.EncoderTests
 {
@@ -761,27 +762,31 @@ namespace UnitTestsProject.EncoderTests
             {
 
             }
-
-
         }
 
 
-
+        /// <summary>
+        /// The test checks the bucket information of the encoder with different input values. 
+        /// The encoder parameters include the minimum and maximum values, the number of buckets, 
+        /// the radius, and periodicity. The test asserts the expected bucket information for input 
+        /// values close to the bucket boundaries, inside and outside the range, and at the middle of 
+        /// the range.
+        /// </summary>
         [TestMethod]
         public void TestGetBucketInfoNonPeriodic()
         {
             ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
-    {
-        { "W", 21},
-        { "N", 100},
-        { "Radius", -1.0},
-        { "MinVal", 0.0},
-        { "MaxVal", 100.0 },
-        { "Periodic", false},
-        { "Name", "scalar_nonperiodic"},
-        { "ClipInput", false},
-        { "NumBuckets", 100 },
-    });
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
 
             // Test values near bucket boundaries
             int[] expected = new int[] { 49, 50, 49, 50 };
@@ -817,22 +822,27 @@ namespace UnitTestsProject.EncoderTests
             CollectionAssert.AreEqual(expected, bucketInfo);
         }
 
-
+        /// <summary>
+        /// It creates an instance of the ScalarEncoder with specified parameters and tests the method with various 
+        /// input values. It tests values near bucket boundaries, values outside of range, and a value in the middle of the 
+        /// range. For each input value, it compares the expected bucket info with the actual bucket info obtained from the method, 
+        /// and outputs the result to the console.
+        /// </summary>
         [TestMethod]
         public void TestGetBucketInfoPeriodic()
         {
             ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
-    {
-        { "W", 21},
-        { "N", 100},
-        { "Radius", -1.0},
-        { "MinVal", 0.0},
-        { "MaxVal", 100.0 },
-        { "Periodic", true},
-        { "Name", "scalar_nonperiodic"},
-        { "ClipInput", false},
-        { "NumBuckets", 100 },
-    });
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", true},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
 
             // Test values near bucket boundaries
             int[] expected = new int[] { 49, 49, 49, 50 };
@@ -866,9 +876,7 @@ namespace UnitTestsProject.EncoderTests
             bucketInfo = encoder.GetBucketInfo(50.0);
             Console.WriteLine($"Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
             CollectionAssert.AreEqual(expected, bucketInfo);
-        }
-
-
+        }    
 
     }
 }
