@@ -876,7 +876,36 @@ namespace UnitTestsProject.EncoderTests
             bucketInfo = encoder.GetBucketInfo(50.0);
             Console.WriteLine($"Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
             CollectionAssert.AreEqual(expected, bucketInfo);
-        }    
+        }
+
+
+     
+        [TestMethod]
+        public void Test_GetTopDownMapping_Periodic()
+        {
+            double input = 0.25;
+            bool periodic = true;
+            int numBuckets = 4;
+
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21},
+        { "N", 100},
+        { "Radius", -1.0},
+        { "MinVal", 0.0},
+        { "MaxVal", 1.0 },
+        { "Periodic", periodic},
+        { "Name", "scalar_nonperiodic"},
+        { "ClipInput", false},
+        { "NumBuckets", numBuckets },
+    });
+
+            int[] expected = new int[] { 0, 1, 0, 0 };
+            int[] mapping = encoder._getTopDownMapping(input, periodic, numBuckets);
+
+            CollectionAssert.AreEqual(expected, mapping);
+        }
+
 
     }
 }

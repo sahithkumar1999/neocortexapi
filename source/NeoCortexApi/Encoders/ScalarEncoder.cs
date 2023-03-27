@@ -801,5 +801,48 @@ namespace NeoCortexApi.Encoders
             // Return the bucket values
             return new double[] { bucketLowerBound, bucketUpperBound };
         }
+
+        public int[] _getTopDownMapping(double input, bool Periodic, int numBuckets)
+        {
+            int[] mapping = new int[numBuckets];
+
+            if (Periodic)
+            {
+                double bucketWidth = (double)1.0 / (double)numBuckets;
+                int bucketIndex = (int)Math.Floor(input / bucketWidth);
+
+                for (int i = 0; i < numBuckets; i++)
+                {
+                    double dist = Math.Abs(i - bucketIndex) * bucketWidth;
+                    mapping[i] = (dist <= bucketWidth / 2) ? 1 : 0;
+                }
+            }
+            else
+            {
+                double maxVal = MaxVal;
+                double minVal = MinVal;
+                double radius = Radius;
+
+                if (radius == -1)
+                {
+                    radius = (maxVal - minVal) / numBuckets / 2;
+                }
+
+                double bucketWidth = radius * 2;
+                double halfBucket = bucketWidth / 2.0;
+                int bucketIndex = (int)Math.Floor((input - minVal + radius) / bucketWidth);
+
+                for (int i = 0; i < numBuckets; i++)
+                {
+                    double bucketStart = (i * bucketWidth) + minVal - radius;
+                    double dist = Math.Abs(bucketStart - input);
+                    mapping[i] = (dist <= halfBucket) ? 1 : 0;
+                }
+            }
+
+            return mapping;
+        }
+
+
     }
 }
