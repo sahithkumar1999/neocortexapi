@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace NeoCortexApi.Encoders
@@ -280,6 +281,47 @@ namespace NeoCortexApi.Encoders
         }
 
 
+
+        /// <summary>
+        /// This method maps a value from one range to another range.
+        ///It takes in the value, the minimum and maximum of the input range, and the minimum and maximum of the output range as parameters.
+        ///The method then returns the corresponding value in the output range based on the input value and input-output range relationship.
+        /// </summary>
+        /// <param name="val"></param>
+        /// <param name="fromMin"></param>
+        /// <param name="fromMax"></param>
+        /// <param name="toMin"></param>
+        /// <param name="toMax"></param>
+        /// <returns></returns>
+        public static double map(double val, double fromMin, double fromMax, double toMin, double toMax)
+        {
+            return (val - fromMin) * (toMax - toMin) / (fromMax - fromMin) + toMin;
+        }
+
+
+        /// <summary>
+        ///This method wraps an input value within a specified range, so that it always falls within the range.
+        /// If the input value is outside the range, it is wrapped around to the other side of the range until it falls within the range.
+        /// The range is defined by a minimum and maximum value.
+        /// </summary>
+        /// <param name="val"></param>
+        /// <param name="minVal"></param>
+        /// <param name="maxVal"></param>
+        /// <returns></returns>
+        public static int wrap(int val, int minVal, int maxVal)
+        {
+            int range = maxVal - minVal + 1;
+            while (val < minVal)
+            {
+                val += range;
+            }
+            while (val > maxVal)
+            {
+                val -= range;
+            }
+            return val;
+        }
+
         /// <summary>
         /// Returns the rendered similarity matrix for the whole rage of values between min and max.
         /// </summary>
@@ -362,48 +404,7 @@ namespace NeoCortexApi.Encoders
             return HtmSerializer.DeserializeObject<T>(sr, name, excludeMembers);
         }
 
-        /*
-
-        public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
-        {
-            // Fallback closenss is a percentage match
-            if (this.encoders == null)
-            {
-                double err = Math.Abs(expValues[0] - actValues[0]);
-                double closeness;
-                if (fractional)
-                {
-                    double denom = Math.Max(expValues[0], actValues[0]);
-                    if (denom == 0)
-                    {
-                        denom = 1.0;
-                    }
-                    closeness = 1.0 - err / denom;
-                    if (closeness < 0)
-                    {
-                        closeness = 0;
-                    }
-                }
-                else
-                {
-                    closeness = err;
-                }
-                return new double[] { closeness };
-            }
-
-            // Concatenate the results from closeness scores on each child encoder
-            int scalarIdx = 0;
-            List<double> retVals = new List<double>();
-            foreach (var encoder in this.encoders)
-            {
-                var (name, enc, offset) = this.encoder;
-                double[] values = enc.ClosenessScores(expValues.Skip(scalarIdx).ToArray(), actValues.Skip(scalarIdx).ToArray(), fractional);
-                scalarIdx += values.Length;
-                retVals.AddRange(values);
-            }
-            return retVals.ToArray();
-        }
-        */
+       
         public bool Equals(IHtmModule other)
         {
             return this.Equals((object)other);
