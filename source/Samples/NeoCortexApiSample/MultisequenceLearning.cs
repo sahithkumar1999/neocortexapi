@@ -1,12 +1,15 @@
-﻿using NeoCortexApi;
+﻿
+using NeoCortexApi;
 using NeoCortexApi.Classifiers;
-using NeoCortexApi.Encoders;
+
 using NeoCortexApi.Entities;
 using NeoCortexApi.Network;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+
+
 
 
 namespace NeoCortexApiSample
@@ -68,7 +71,7 @@ namespace NeoCortexApiSample
                 { "MaxVal", max}
             };
 
-            EncoderBase encoder = new ScalarEncoder(settings);
+            NeoCortexApi.Encoders.EncoderBase encoder = new NeoCortexApi.Encoders.ScalarEncoder(settings);
 
             return RunExperiment(inputBits, cfg, encoder, sequences);
         }
@@ -182,6 +185,9 @@ namespace NeoCortexApiSample
 
                 previousInputs.Add("-1.0");
 
+                // Set on true if the system has learned the sequence with a maximum acurracy.
+                bool isLearningCompleted = false;
+
                 //
                 // Now training with SP+TM. SP is pretrained on the given input pattern set.
                 for (int i = 0; i < maxCycles; i++)
@@ -281,6 +287,7 @@ namespace NeoCortexApiSample
                         {
                             sw.Stop();
                             Debug.WriteLine($"Sequence learned. The algorithm is in the stable state after 30 repeats with with accuracy {accuracy} of maximum possible {maxMatchCnt}. Elapsed sequence {sequenceKeyPair.Key} learning time: {sw.Elapsed}.");
+                            isLearningCompleted = true;
                             break;
                         }
                     }
@@ -293,6 +300,9 @@ namespace NeoCortexApiSample
                     // This resets the learned state, so the first element starts allways from the beginning.
                     tm.Reset(mem);
                 }
+
+                if (isLearningCompleted == false)
+                    throw new Exception($"The system didn't learn with expected acurracy!");
             }
 
             Debug.WriteLine("------------ END ------------");
