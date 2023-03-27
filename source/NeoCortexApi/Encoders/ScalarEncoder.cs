@@ -516,6 +516,69 @@ namespace NeoCortexApi.Encoders
         }
 
 
+        public int[] GetBucketInfo(double input)
+        {
+            // Clip input to range
+            if (input < MinVal)
+            {
+                input = MinVal;
+            }
+            else if (input > MaxVal)
+            {
+                input = MaxVal;
+            }
+
+            // Calculate bucket index
+            double bucketWidth = (MaxVal - MinVal) / N;
+            int bucketIndex = (int)((input - MinVal) / bucketWidth);
+
+            // Calculate bucket center
+            double bucketCenter = MinVal + (bucketIndex + 0.5) * bucketWidth;
+
+            // Calculate bucket bounds
+            double bucketStart = MinVal + bucketIndex * bucketWidth;
+            double bucketEnd = MinVal + (bucketIndex + 1) * bucketWidth;
+
+            // Handle periodic encoding
+            if (Periodic)
+            {
+                // Wrap bucket index
+                if (bucketIndex < 0)
+                {
+                    bucketIndex += N;
+                }
+                else if (bucketIndex >= N)
+                {
+                    bucketIndex -= N;
+                }
+
+                // Calculate distance to nearest edge
+                double distToStart = input - bucketStart;
+                double distToEnd = bucketEnd - input;
+
+                if (distToStart < 0)
+                {
+                    distToStart += MaxVal - MinVal;
+                }
+                if (distToEnd < 0)
+                {
+                    distToEnd += MaxVal - MinVal;
+                }
+
+                // Choose the closest edge as bucket center
+                if (distToStart < distToEnd)
+                {
+                    bucketCenter = bucketStart;
+                }
+                else
+                {
+                    bucketCenter = bucketEnd;
+                }
+            }
+
+            return new int[] { bucketIndex, (int)Math.Round(bucketCenter), (int)Math.Round(bucketStart), (int)Math.Round(bucketEnd) };
+        }
+
         /// <summary>
         /// This method takes a list of ranges and returns a string that describes them.
         ///It iterates through the list of ranges and constructs the string by appending each range's start and end values.
