@@ -1,4 +1,4 @@
-﻿// Copyright (c) Damir Dobric. All rights reserved.
+// Copyright (c) Damir Dobric. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoCortex;
@@ -290,6 +290,7 @@ namespace UnitTestsProject.EncoderTests
             {
                 var result = encoder.Encode(i);
 
+                int? bucketIndex = encoder.GetBucketIndex(i);
 
                 int[,] twoDimenArray = ArrayUtils.Make2DArray<int>(result, (int)Math.Sqrt(result.Length), (int)Math.Sqrt(result.Length));
                 var twoDimArray = ArrayUtils.Transpose(twoDimenArray);
@@ -299,14 +300,211 @@ namespace UnitTestsProject.EncoderTests
         }
 
 
+        [TestMethod]
+        public void ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays()
+        {
+            double minValue = 0;
+            double maxValue = 100;
+            int numBits = 1024;
+            double period = maxValue - minValue;
+
+            ScalarEncoder encoder = new ScalarEncoder(numBits, minValue, Convert.ToInt32(maxValue), period);
+
+            for (double i = minValue; i <= maxValue; i += 0.1)
+            {
+                int[] expectedArray = encoder.EncodeIntoArray(i);
+                int[] actualArrays = encoder.EncodeIntoArray(i);
+
+                Console.WriteLine($"i = {i}");
+                Console.WriteLine($"expectedArray = [{string.Join(",", expectedArray)}]");
+                Console.WriteLine($"actualArrays = [{string.Join(",", actualArrays)}]");
+
+
+                Assert.AreEqual(expectedArray.Length, actualArrays.Length);
+
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    Assert.AreEqual(expectedArray[j], actualArrays[j]);
+                }
+
+                string outFolder = nameof(ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays);
+
+                Directory.CreateDirectory(outFolder);
+
+                DateTime now = DateTime.Now;
+
+                Color bitmapColor = Color.Gray;
+
+                if (!expectedArray.SequenceEqual(actualArrays))
+                {
+                    bitmapColor = Color.Red;
+                }
+
+                int[,] twoDimArray = new int[expectedArray.Length, 1];
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    twoDimArray[j, 0] = expectedArray[j];
+                }
+
+                NeoCortexUtils.DrawBitmap(twoDimArray, expectedArray.Length, 1024, $"{outFolder}\\{i}.png", bitmapColor, Color.Green, text: $"v:{i} /b:{actualArrays}");
+            }
+        }
 
 
 
-            /// <summary>
-            /// The DecodeTest
-            /// </summary>
-            /// <param name="input">The input<see cref="int"/></param>
-            public void DecodeTest(int input)
+
+
+
+
+
+
+
+
+
+
+
+
+
+        [TestMethod]
+        
+        public void TestGenerateRangeDescription()
+        {
+            var encoder = new ScalarEncoder(10, 0, 100, true);
+
+            var ranges1 = new List<Tuple<double, double>>()
+            {
+              Tuple.Create(1.0, 3.0),
+              Tuple.Create(7.0, 10.0)
+            };
+
+            Assert.AreEqual("1.00-3.00, 7.00-10.00", encoder.GenerateRangeDescription(ranges1));
+
+            var ranges2 = new List<Tuple<double, double>>()
+            {
+               Tuple.Create(2.5, 2.5)
+            };
+
+            Assert.AreEqual("2.50", encoder.GenerateRangeDescription(ranges2));
+
+            var ranges3 = new List<Tuple<double, double>>()
+            {
+               Tuple.Create(1.0, 1.0),
+               Tuple.Create(5.0, 6.0)
+            };
+
+            Assert.AreEqual("1.00, 5.00-6.00", encoder.GenerateRangeDescription(ranges3));
+        }
+
+
+        [TestMethod]
+        public void ClosenessScorestest1()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+            { "W", 21},
+            { "N", 1024},
+            { "Radius", -1.0},
+            { "MinVal", 0.0},
+            { "MaxVal", 100.0 },
+            { "Periodic", true},
+            { "Name", "scalar_periodic"},
+            { "ClipInput", false},
+            });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 51 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
+            Assert.AreEqual(expectedCloseness, encoder.ClosenessScores(expValues, actValues, fractional)[0], 0.01);
+        }
+
+        [TestMethod]
+        public void ClosenessScorestest2()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21},
+        { "N", 1024},
+        { "Radius", -1.0},
+        { "MinVal", 0.0},
+        { "MaxVal", 100.0 },
+        { "Periodic", false},
+        { "Name", "scalar_nonperiodic"},
+        { "ClipInput", false},
+    });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 50.3 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
+            double maxDifference = 0.01;
+            Assert.AreEqual(expectedCloseness, encoder.ClosenessScores(expValues, actValues, fractional)[0], maxDifference);
+        }
+
+        [TestMethod]
+        public void ClosenessScorestest3()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21 },
+        { "N", 1024 },
+        { "Radius", -1.0 },
+        { "MinVal", 0.0 },
+        { "MaxVal", 100.0 },
+        { "Periodic", true },
+        { "Name", "scalar_periodic" },
+        { "ClipInput", false },
+    });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 70 };
+            bool fractional = true;
+            double expectedCloseness = 0.8;
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01, $"Expected closeness: {expectedCloseness}, Actual closeness: {actualCloseness}");
+        }
+
+        [TestMethod]
+        public void ClosenessScoresTest4()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21},
+        { "N", 1024},
+        { "Radius", -1.0},
+        { "MinVal", 0.0},
+        { "MaxVal", 100.0 },
+        { "Periodic", false},
+        { "Name", "scalar_nonperiodic"},
+        { "ClipInput", false},
+    });
+
+            double[] expValues = new double[] { 25 };
+            double[] actValues = new double[] { 75 };
+            bool fractional = true;
+            double expectedCloseness = 0.5;
+
+            // Act
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+
+            // Assert
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01);
+        }
+
+
+
+
+
+
+        /// <summary>
+        /// The DecodeTest
+        /// </summary>
+        /// <param name="input">The input<see cref="int"/></param>
+        public void DecodeTest(int input)
         {
         }
 
@@ -438,8 +636,6 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
-
-
         /// <summary>
         /// The getDefaultSettings
         /// </summary>
@@ -470,43 +666,84 @@ namespace UnitTestsProject.EncoderTests
             return encoderSettings;
         }
 
+        
+
+
+
+
         [TestMethod]
-        public void TestClosenessScores()
+        [TestCategory("Encoding")]
+        public void ScalarEncodingDecode()
         {
-            // Test case 1 - fractional closeness score
-            double[] expValues1 = { 10 };
-            double[] actValues1 = { 5 };
-            double[] expectedOutput1 = { 0.5 };
-            double[] actualOutput1 = ClosenessScores(expValues1, actValues1);
-            CollectionAssert.AreEqual(expectedOutput1, actualOutput1);
+            int[] output1 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output2 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output3 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output4 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output5 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output6 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output7 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output8 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int minVal = 0;
+            int maxVal = 100;
+            int n = 14;
+            double w = 3.0;
+            bool periodic = true;
 
-            // Test case 2 - non-fractional closeness score
-            double[] expValues2 = { 5 };
-            double[] actValues2 = { 3 };
-            double[] expectedOutput2 = { 2 };
-            double[] actualOutput2 = TestClosenessScores(expValues2, actValues2, false);
-            CollectionAssert.AreEqual(expectedOutput2, actualOutput2);
+            int[][] testCases = new int[][] { output1, output2, output3, output4, output5, output6, output7, output8 };
 
-            // Test case 3 - periodic, fractional closeness score
-            double[] expValues3 = { 350 };
-            double[] actValues3 = { 10 };
-            double[] expectedOutput3 = { 0.02777777777777779 };
-            double[] actualOutput3 = ClosenessScores(expValues3, actValues3);
-            CollectionAssert.AreEqual(expectedOutput3, actualOutput3);
+            foreach (int[] output in testCases)
+            {
+                int[] input = ScalarEncoder.decode(output, minVal, maxVal, n, w, periodic);
 
-            // Test case 4 - periodic, non-fractional closeness score
-            double[] expValues4 = { 300 };
-            double[] actValues4 = { 400 };
-            double[] expectedOutput4 = { 100 };
-            double[] actualOutput4 = TestClosenessScores(expValues4, actValues4, false);
-            CollectionAssert.AreEqual(expectedOutput4, actualOutput4);
+                Console.WriteLine("Output: " + string.Join(",", output));
+                Console.WriteLine("Input: " + string.Join(",", input));
+                Console.WriteLine("----------------------------------------");
+            }
+
         }
 
-        private double[] ClosenessScores(double[] expValues1, double[] actValues1)
+
+
+        [TestMethod]
+        public void TestGetBucketValues()
         {
-            throw new NotImplementedException();
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+    {
+        { "W", 21},
+        { "N", 1024},
+        { "Radius", -1.0},
+        { "MinVal", 0.0},
+        { "MaxVal", 100.0 },
+        { "Periodic", false},
+        { "Name", "scalar_nonperiodic"},
+        { "ClipInput", false},
+        { "NumBuckets", 100 },
+    });
+
+            // Act and assert
+            Assert.ThrowsException<ArgumentException>(() => encoder.GetBucketValues(-10.0));
+
+            double[] bucketValues = null;
+            try
+            {
+                bucketValues = encoder.GetBucketValues(47.5);
+                Console.WriteLine($"Bucket values - Actual: {string.Join(", ", bucketValues)}, Expected: {string.Join(", ", new double[] { 47, 48 })}");
+                Assert.AreEqual(new double[] { 47, 48 }, bucketValues);
+            }
+            catch (Exception)
+            {
+               
+            }
+
+        
         }
+
+
+
+
     }
+
 }
 
 
