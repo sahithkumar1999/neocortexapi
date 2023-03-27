@@ -2,13 +2,20 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 using NeoCortexApi.Entities;
 using NeoCortexApi.Utility;
+using NeoCortexEntities.NeuroVisualizer;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Buffers.Text;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace NeoCortexApi.Encoders
@@ -149,7 +156,18 @@ namespace NeoCortexApi.Encoders
             }
         }
 
-
+        /// <summary>
+        /// This method initializes the encoder with the given parameters, such as w, minVal, maxVal, n, radius, and resolution.
+        ///It checks if the encoder is already initialized and if minVal and maxVal are valid.
+        ///If N is not set, it calculates N based on the given parameters and sets the Range and Resolution values accordingly.
+        /// </summary>
+        /// <param name="w"></param>
+        /// <param name="minVal"></param>
+        /// <param name="maxVal"></param>
+        /// <param name="n"></param>
+        /// <param name="radius"></param>
+        /// <param name="resolution"></param>
+        /// <exception cref="ArgumentException"></exception>
         protected void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
         {
             if (N != 0)
@@ -207,7 +225,19 @@ namespace NeoCortexApi.Encoders
             }
         }
 
-
+        /// <summary>
+        /// This method decodes an array of outputs based on the provided parameters, and returns an array of decoded inputs.
+        ///The decoding process involves identifying the runs of 1s in the output array, and mapping those runs to ranges of input 
+        ///values based on the specified minimum and maximum values.
+        ///If the periodic parameter is set to true, the decoded input array is checked for periodicity and adjusted if necessary.
+        /// </summary>
+        /// <param name="output"></param>
+        /// <param name="minVal"></param>
+        /// <param name="maxVal"></param>
+        /// <param name="n"></param>
+        /// <param name="w"></param>
+        /// <param name="periodic"></param>
+        /// <returns></returns>
         public static int[] decode(int[] output, int minVal, int maxVal, int n, double w, bool periodic)
         {
             List<int[]> runs = new List<int[]>();
@@ -302,27 +332,16 @@ namespace NeoCortexApi.Encoders
             return input.ToArray();
         }
 
-        private static double map(double val, double fromMin, double fromMax, double toMin, double toMax)
-        {
-            return (val - fromMin) * (toMax - toMin) / (fromMax - fromMin) + toMin;
-        }
-
-        private static int wrap(int val, int minVal, int maxVal)
-        {
-            int range = maxVal - minVal + 1;
-            while (val < minVal)
-            {
-                val += range;
-            }
-            while (val > maxVal)
-            {
-                val -= range;
-            }
-            return val;
-        }
 
 
 
+        /// <summary>
+        /// This method encodes the input into an array of active bits using a scalar encoder
+        /// It takes into account both periodic and non-periodic encoders
+        /// The active bits are set based on the bucket index calculated for the input value
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         // EncodeIntoArray method
         public int[] EncodeIntoArray(double input)
         {
@@ -376,15 +395,6 @@ namespace NeoCortexApi.Encoders
             }
             return activeBits;
         }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -505,6 +515,14 @@ namespace NeoCortexApi.Encoders
 
         }
 
+
+        /// <summary>
+        /// This method takes a list of ranges and returns a string that describes them.
+        ///It iterates through the list of ranges and constructs the string by appending each range's start and end values.
+        ///If the start and end values of a range are the same, it only appends the start value to the string.
+        /// </summary>
+        /// <param name="ranges"></param>
+        /// <returns></returns>
         public string GenerateRangeDescription(List<Tuple<double, double>> ranges)
         {
             var desc = "";
@@ -529,12 +547,6 @@ namespace NeoCortexApi.Encoders
             return desc;
         }
 
-
-
-
-      
-
-
         private string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> tuple)
         {
             throw new NotImplementedException();
@@ -551,25 +563,11 @@ namespace NeoCortexApi.Encoders
         }
 
 
-
-
-        /*
-                public int? GetBucketIndex(object inputData)
-                {
-                    double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
-                    if (input == double.NaN)
-                    {
-                        return null;
-                    }
-
-                    int? bucketVal = GetFirstOnBit(input);
-
-                    return bucketVal;
-                }
-               */
-
         /// <summary>
-        /// The Encode
+        /// This method encodes an input value using the Scalar Encoder algorithm and returns an integer array as the output.
+        ///The input value is first converted to a double using the CultureInfo.InvariantCulture format.
+        ///The method checks if the input value is NaN and returns null if it is, otherwise it proceeds with encoding the value 
+        ///into an integer array using the Scalar Encoder algorithm.
         /// </summary>
         /// <param name="inputData">The inputData<see cref="object"/></param>
         /// <returns>The <see cref="int[]"/></returns>
@@ -617,7 +615,16 @@ namespace NeoCortexApi.Encoders
         }
 
 
-
+        /// <summary>
+        /// This method calculates the closeness score between two sets of scalar values, expValues and actValues.
+        ///The method takes an optional boolean parameter 'fractional', which if set to true, calculates the closeness 
+        ///score as a fraction of the possible range of values.
+        ///The method returns an array containing the calculated closeness score.
+        /// </summary>
+        /// <param name="expValues"></param>
+        /// <param name="actValues"></param>
+        /// <param name="fractional"></param>
+        /// <returns></returns>
         public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
         {
             double expValue = expValues[0];
@@ -677,7 +684,15 @@ namespace NeoCortexApi.Encoders
         }
 
 
-
+        /// <summary>
+        /// This method calculates the lower and upper bounds of a given input value in a range of values.
+        ///It throws an exception if the input value is outside the encoder's range or is not a valid number.
+        ///It also prints the bucket width, bucket index, bucket lower bound, and bucket upper bound to the console.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="InvalidOperationException"></exception>
         public double[] GetBucketValues(double input)
         {
             // Check for edge cases
@@ -713,14 +728,5 @@ namespace NeoCortexApi.Encoders
             // Return the bucket values
             return new double[] { bucketLowerBound, bucketUpperBound };
         }
-
-
-
-
-        //public static object Deserialize<T>(StreamReader sr, string name)
-        //{
-        //    var excludeMembers = new List<string> { nameof(ScalarEncoder.Properties) };
-        //    return HtmSerializer2.DeserializeObject<T>(sr, name, excludeMembers);
-        //}
     }
 }
