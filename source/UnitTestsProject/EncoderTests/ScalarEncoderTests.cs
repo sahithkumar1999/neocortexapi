@@ -24,6 +24,7 @@ using Microsoft.VisualStudio.TestPlatform.Utilities;
 using System.Text;
 using static SkiaSharp.SKImageFilter;
 using LearningFoundation;
+using Org.BouncyCastle.Utilities;
 
 namespace UnitTestsProject.EncoderTests
 {
@@ -891,7 +892,12 @@ namespace UnitTestsProject.EncoderTests
         }
 
 
-     
+        /// <summary>
+        /// The method tests the _getTopDownMapping function of the ScalarEncoder class with periodic parameter set to true.
+        ///It sets input, periodic, and numBuckets values and creates a ScalarEncoder object with some default parameters.
+        ///Then it compares the expected mapping array with the actual mapping array returned from the _getTopDownMapping 
+        ///function using CollectionAssert.AreEqual method.
+        /// </summary>
         [TestMethod]
         public void Test_GetTopDownMapping_Periodic()
         {
@@ -900,17 +906,17 @@ namespace UnitTestsProject.EncoderTests
             int numBuckets = 4;
 
             ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
-    {
-        { "W", 21},
-        { "N", 100},
-        { "Radius", -1.0},
-        { "MinVal", 0.0},
-        { "MaxVal", 1.0 },
-        { "Periodic", periodic},
-        { "Name", "scalar_nonperiodic"},
-        { "ClipInput", false},
-        { "NumBuckets", numBuckets },
-    });
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 1.0 },
+                { "Periodic", periodic},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", numBuckets },
+            });
 
             int[] expected = new int[] { 0, 1, 0, 0 };
             int[] mapping = encoder._getTopDownMapping(input, periodic, numBuckets);
