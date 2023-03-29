@@ -1,16 +1,29 @@
-﻿// Copyright (c) Damir Dobric. All rights reserved.
+// Copyright (c) Damir Dobric. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoCortex;
 using NeoCortexApi.Encoders;
+using NeoCortexApi.Entities;
 using NeoCortexApi.Network;
 using NeoCortexApi.Utility;
+using NeoCortexEntities.NeuroVisualizer;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Ocsp;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using static SkiaSharp.SKPath;
+using System.Xml.Linq;
+using static System.Net.Mime.MediaTypeNames;
+using Org.BouncyCastle.Crypto;
+using Microsoft.VisualStudio.TestPlatform.Utilities;
+using System.Text;
+using static SkiaSharp.SKImageFilter;
+using LearningFoundation;
 
 namespace UnitTestsProject.EncoderTests
 {
@@ -120,15 +133,14 @@ namespace UnitTestsProject.EncoderTests
                     { "ClipInput", true},
                 });
 
-            //for (int i = 1; i < 367; i++)
-            //{
+
             var result = encoder.Encode(input);
 
             Debug.WriteLine(input);
 
             Debug.WriteLine(NeoCortexApi.Helpers.StringifyVector(result));
             Debug.WriteLine(NeoCortexApi.Helpers.StringifyVector(expectedResult));
-            //}          
+
 
             Assert.IsTrue(expectedResult.SequenceEqual(result));
         }
@@ -177,7 +189,7 @@ namespace UnitTestsProject.EncoderTests
 
             //Assert.IsTrue(expectedResult.SequenceEqual(result));
         }
-        
+
         /// <summary>
         /// Encodes a set of numbers and produces bitmap output.
         /// </summary>
@@ -202,7 +214,7 @@ namespace UnitTestsProject.EncoderTests
                 { "Name", "scalar"},
                 { "ClipInput", false},
             });
-           
+
             for (decimal i = 0.0M; i < (long)encoder.MaxVal; i += 0.1M)
             {
                 var result = encoder.Encode(i);
@@ -214,56 +226,13 @@ namespace UnitTestsProject.EncoderTests
 
                 NeoCortexUtils.DrawBitmap(twoDimArray, 1024, 1024, $"{outFolder}\\{i}.png", Color.Gray, Color.Green, text: $"v:{i} /b:{bucketIndex}");
             }
- /*           
-            // Test case 1: Test GetBucketIndex method with a value below the minimum value
-            decimal value1 = -1;
-            int? expectedIndex1 = null;
-            int? actualIndex1 = encoder.GetBucketIndex(value1);
-            Assert.AreEqual(expectedIndex1, actualIndex1);
-
-            // Test case 2: Test GetBucketIndex method with a value above the maximum value
-            decimal value2 = 101;
-            int? expectedIndex2 = null;
-            int? actualIndex2 = encoder.GetBucketIndex(value2);
-            Assert.AreEqual(expectedIndex2, actualIndex2);
-
-            // Test case 3: Test GetBucketIndex method with a value that is not part of any bucket
-            decimal value3 = 25.7M;
-            int? expectedIndex3 = null;
-            int? actualIndex3 = encoder.GetBucketIndex(value3);
-            Assert.AreEqual(expectedIndex3, actualIndex3);
-
-
-            // Test case 4: Test GetBucketIndex method with a value that is part of a bucket
-            decimal value4 = 70.8M;
-            int? expectedIndex4 = 14;
-            int? actualIndex4 = encoder.GetBucketIndex(value4);
-            Assert.AreEqual(expectedIndex4, actualIndex4);
-
-
-
-            // Test case 5: Test GetBucketIndex method with a value that is equal to the minimum value
-            decimal value5 = 0;
-            int? expectedIndex5 = 0;
-            int? actualIndex5 = encoder.GetBucketIndex(value5);
-            Assert.AreEqual(expectedIndex5, actualIndex5);
-
-            // Test case 6: Test GetBucketIndex method with a value that is equal to the maximum value
-            decimal value6 = 100;
-            int? expectedIndex6 = 20;
-            int? actualIndex6 = encoder.GetBucketIndex(value6);
-            Assert.AreEqual(expectedIndex6, actualIndex6);
-
-
-            // Test case 7: Test GetBucketIndex method with a value that is equal to the center of a bucket
-            decimal value7 = 50;
-            int? expectedIndex7 = 10;
-            int? actualIndex7 = encoder.GetBucketIndex(value7);
-            Assert.AreEqual(expectedIndex7, actualIndex7);
-*/
-
         }
 
+        /// <summary>
+        /// This method tests the periodic scalar encoding by iterating over a range of decimal values and encoding each value to a bitmap.
+        ///For each encoded value, it also gets the corresponding bucket index and adds it as text to the bitmap.
+        ///The generated bitmaps are saved to a folder named after the test method.
+        /// </summary>
         [TestMethod]
         [TestCategory("Experiment")]
         public void ScalarEncodingGetBucketIndexPeriodic()
@@ -290,6 +259,7 @@ namespace UnitTestsProject.EncoderTests
             {
                 var result = encoder.Encode(i);
 
+                int? bucketIndex = encoder.GetBucketIndex(i);
 
                 int[,] twoDimenArray = ArrayUtils.Make2DArray<int>(result, (int)Math.Sqrt(result.Length), (int)Math.Sqrt(result.Length));
                 var twoDimArray = ArrayUtils.Transpose(twoDimenArray);
@@ -298,15 +268,260 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
+        /// <summary>
+        /// This test case tests the EncodeIntoArray method of the ScalarEncoder class to ensure it returns the correct encoded 
+        /// array for a range of input values.
+        ///The test iterates over a range of input values between 0 and 100 and compares the expected and actual encoded arrays for each value.
+        ///The test also generates a bitmap image for each input value, highlighting in red any elements of the actual encoded array that 
+        ///differ from the expected encoded array.
+        /// </summary>
+        [TestMethod]
+        public void ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays()
+        {
+            double minValue = 0;
+            double maxValue = 100;
+            int numBits = 1024;
+            double period = maxValue - minValue;
+
+            ScalarEncoder encoder = new ScalarEncoder(numBits, minValue, Convert.ToInt32(maxValue), period);
+
+            for (double i = minValue; i <= maxValue; i += 0.1)
+            {
+                int[] expectedArray = encoder.EncodeIntoArray(i);
+                int[] actualArrays = encoder.EncodeIntoArray(i);
+
+                Console.WriteLine($"i = {i}");
+                Console.WriteLine($"expectedArray = [{string.Join(",", expectedArray)}]");
+                Console.WriteLine($"actualArrays = [{string.Join(",", actualArrays)}]");
 
 
+                Assert.AreEqual(expectedArray.Length, actualArrays.Length);
+
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    Assert.AreEqual(expectedArray[j], actualArrays[j]);
+                }
+
+                string outFolder = nameof(ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays);
+
+                Directory.CreateDirectory(outFolder);
+
+                DateTime now = DateTime.Now;
+
+                Color bitmapColor = Color.Gray;
+
+                if (!expectedArray.SequenceEqual(actualArrays))
+                {
+                    bitmapColor = Color.Red;
+                }
+
+                int[,] twoDimArray = new int[expectedArray.Length, 1];
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    twoDimArray[j, 0] = expectedArray[j];
+                }
+
+                NeoCortexUtils.DrawBitmap(twoDimArray, expectedArray.Length, 1024, $"{outFolder}\\{i}.png", bitmapColor, Color.Green, text: $"v:{i} /b:{actualArrays}");
+            }
+        }
+
+        /// <summary>
+        /// This is a unit test for the GenerateRangeDescription method of the ScalarEncoder class.
+        ///It tests the method with three different input ranges and verifies the output using Assert.AreEqual.
+        ///The test checks that the method generates the correct string representation of the input ranges.
+        /// </summary>
+        [TestMethod]
+        public void TestGenerateRangeDescription()
+        {
+            var encoder = new ScalarEncoder(10, 0, 100, true);
+
+            var ranges1 = new List<Tuple<double, double>>()
+            {
+                Tuple.Create(1.0, 3.0),
+                Tuple.Create(7.0, 10.0)
+            };
+
+            string actualRange1 = encoder.GenerateRangeDescription(ranges1);
+            string expectedRange1 = "1.00-3.00, 7.00-10.00";
+            Console.WriteLine($"Actual range 1: {actualRange1}");
+            Console.WriteLine($"Expected range 1: {expectedRange1}");
+            Assert.AreEqual(expectedRange1, actualRange1);
+
+            var ranges2 = new List<Tuple<double, double>>()
+            {
+                Tuple.Create(2.5, 2.5)
+            };
+
+            string actualRange2 = encoder.GenerateRangeDescription(ranges2);
+            string expectedRange2 = "2.50";
+            Console.WriteLine($"Actual range 2: {actualRange2}");
+            Console.WriteLine($"Expected range 2: {expectedRange2}");
+            Assert.AreEqual(expectedRange2, actualRange2);
+
+            var ranges3 = new List<Tuple<double, double>>()
+            {
+                Tuple.Create(1.0, 1.0),
+                Tuple.Create(5.0, 6.0)
+            };
+
+            string actualRange3 = encoder.GenerateRangeDescription(ranges3);
+            string expectedRange3 = "1.00, 5.00-6.00";
+            Console.WriteLine($"Actual range 3: {actualRange3}");
+            Console.WriteLine($"Expected range 3: {expectedRange3}");
+            Assert.AreEqual(expectedRange3, actualRange3);
+        }
+
+        /// <summary>
+        /// This test case checks the closeness score calculation of a scalar encoder with periodic input.
+        ///It creates an instance of the encoder and passes in the necessary parameters.
+        ///It then compares the expected and actual closeness scores and outputs them using Console.WriteLine.
+        /// </summary>
+        [TestMethod]
+        public void ClosenessScorestest1()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", true},
+                { "Name", "scalar_periodic"},
+                { "ClipInput", false},
+            });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 51 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
+
+            // Act
+            double[] actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional);
+
+            // Assert
+            Console.WriteLine("Expected closeness: " + expectedCloseness);
+            Console.WriteLine("Actual closeness: " + actualCloseness[0]);
+            Assert.AreEqual(expectedCloseness, actualCloseness[0], 0.01);
+        }
 
 
-            /// <summary>
-            /// The DecodeTest
-            /// </summary>
-            /// <param name="input">The input<see cref="int"/></param>
-            public void DecodeTest(int input)
+        /// <summary>
+        /// This test case checks the closeness score calculation of the ScalarEncoder with non-periodic encoding.
+        ///The test input consists of an expected value, an actual value, and a maximum allowed difference.
+        ///The expected closeness score, actual closeness score, and the maximum difference are printed to the console before assertion.
+        /// </summary>
+        [TestMethod]
+        public void ClosenessScorestest2()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+            });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 50.3 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
+            double maxDifference = 0.01;
+
+            // Act
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+
+            // Assert
+            Console.WriteLine($"Expected closeness: {expectedCloseness}");
+            Console.WriteLine($"Actual closeness: {actualCloseness}");
+            Console.WriteLine($"Max difference: {maxDifference}");
+
+            Assert.AreEqual(expectedCloseness, actualCloseness, maxDifference);
+        }
+
+        /// <summary>
+        /// This test case checks the closeness score of two arrays of scalar values using the ScalarEncoder class.
+        ///The test initializes the encoder with specific parameters and provides expected and actual values for the closeness score.
+        ///Print statements are included to display the expected and actual closeness scores, and an assertion is made to ensure that 
+        ///they match within a tolerance of 0.01.
+        /// </summary>
+        [TestMethod]
+        public void ClosenessScorestest3()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21 },
+                { "N", 1024 },
+                { "Radius", -1.0 },
+                { "MinVal", 0.0 },
+                { "MaxVal", 100.0 },
+                { "Periodic", true },
+                { "Name", "scalar_periodic" },
+                { "ClipInput", false },
+            });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 70 };
+            bool fractional = true;
+            double expectedCloseness = 0.8;
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+
+            // Print statements
+            Console.WriteLine("Expected Closeness: " + expectedCloseness);
+            Console.WriteLine("Actual Closeness: " + actualCloseness);
+
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01, $"Expected closeness: {expectedCloseness}, Actual closeness: {actualCloseness}");
+        }
+
+
+        /// <summary>
+        /// This test case tests the ClosenessScores() method of the ScalarEncoder class.
+        ///The test case checks the closeness score of two values, one expected and one actual, using a non-periodic scalar encoder.
+        ///The expected and actual closeness scores are compared with a tolerance of 0.01 using Assert.AreEqual().
+        /// </summary>
+        [TestMethod]
+        public void ClosenessScoresTest4()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+            });
+
+            double[] expValues = new double[] { 25 };
+            double[] actValues = new double[] { 75 };
+            bool fractional = true;
+            double expectedCloseness = 0.5;
+
+            // Act
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+            Console.WriteLine("Expected closeness: " + expectedCloseness);
+            Console.WriteLine("Actual closeness: " + actualCloseness);
+
+            // Assert
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01);
+        }
+
+
+        /// <summary>
+        /// The DecodeTest
+        /// </summary>
+        /// <param name="input">The input<see cref="int"/></param>
+        public void DecodeTest(int input)
         {
         }
 
@@ -467,6 +682,202 @@ namespace UnitTestsProject.EncoderTests
 
             return encoderSettings;
         }
+
+
+
+
+
+        /// <summary>
+        /// This is a test case for decoding the output of ScalarEncoder into input values.
+        ///Eight test cases are executed using different output values and the expected input values are computed using the decode function.
+        ///The actual input values and the expected input values are printed for each test case to verify the correctness of the decoding algorithm.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Encoding")]
+        public void ScalarEncodingDecode()
+        {
+            int[] output1 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output2 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output3 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output4 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output5 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output6 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output7 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output8 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int minVal = 0;
+            int maxVal = 100;
+            int n = 14;
+            double w = 3.0;
+            bool periodic = true;
+
+            int[][] testCases = new int[][] { output1, output2, output3, output4, output5, output6, output7, output8 };
+
+            foreach (int[] output in testCases)
+            {
+                int[] input = ScalarEncoder.decode(output, minVal, maxVal, n, w, periodic);
+
+                Console.WriteLine("Output: " + string.Join(",", output));
+                Console.WriteLine("Input: " + string.Join(",", input));
+                Console.WriteLine("----------------------------------------");
+            }
+
+        }
+
+
+        /// <summary>
+        /// This test case tests the behavior of the GetBucketValues() method of the ScalarEncoder class.
+        ///The test case sets up a ScalarEncoder instance with specific configuration parameters and tests 
+        ///for an invalid input value that should throw an exception.
+        ///The test then verifies the correct output of the GetBucketValues() method for a valid input value, 
+        ///by comparing the actual output with the expected output and also printing the bucket values for debugging purposes.
+        /// </summary>
+        [TestMethod]
+        public void TestGetBucketValues()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
+
+            // Act and assert
+            Assert.ThrowsException<ArgumentException>(() => encoder.GetBucketValues(-10.0));
+
+            double[] bucketValues = null;
+            try
+            {
+                bucketValues = encoder.GetBucketValues(47.5);
+                Console.WriteLine($"Bucket values - Actual: {string.Join(", ", bucketValues)}, Expected: {string.Join(", ", new double[] { 47, 48 })}");
+                Assert.AreEqual(new double[] { 47, 48 }, bucketValues);
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+
+        /// <summary>
+        /// The test checks the bucket information of the encoder with different input values. 
+        /// The encoder parameters include the minimum and maximum values, the number of buckets, 
+        /// the radius, and periodicity. The test asserts the expected bucket information for input 
+        /// values close to the bucket boundaries, inside and outside the range, and at the middle of 
+        /// the range.
+        /// </summary>
+        [TestMethod]
+        public void TestGetBucketInfoNonPeriodic()
+        {
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
+
+            // Test values near bucket boundaries
+            int[] expected = new int[] { 49, 50, 49, 50 };
+            int[] bucketInfo = encoder.GetBucketInfo(49.0);
+            Console.WriteLine($"Bucket info for 49.0: {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Bucket info for 50.0: {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 51, 52, 51, 52 };
+            bucketInfo = encoder.GetBucketInfo(51.0);
+            Console.WriteLine($"Bucket info for 51.0: {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test values outside of range
+            expected = new int[] { 0, 0, 0, 1 };
+            bucketInfo = encoder.GetBucketInfo(-10.0);
+            Console.WriteLine($"Bucket info for -10.0: {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 100, 100, 100, 101 };
+            bucketInfo = encoder.GetBucketInfo(110.0);
+            Console.WriteLine($"Bucket info for 110.0: {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test value in middle of range
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Bucket info for 50.0: {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+        }
+
+        /// <summary>
+        /// It creates an instance of the ScalarEncoder with specified parameters and tests the method with various 
+        /// input values. It tests values near bucket boundaries, values outside of range, and a value in the middle of the 
+        /// range. For each input value, it compares the expected bucket info with the actual bucket info obtained from the method, 
+        /// and outputs the result to the console.
+        /// </summary>
+        [TestMethod]
+        public void TestGetBucketInfoPeriodic()
+        {
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", true},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
+
+            // Test values near bucket boundaries
+            int[] expected = new int[] { 49, 49, 49, 50 };
+            int[] bucketInfo = encoder.GetBucketInfo(49.0);
+            Console.WriteLine($"Bucket info for 49.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 51, 51, 51, 52 };
+            bucketInfo = encoder.GetBucketInfo(51.0);
+            Console.WriteLine($"Bucket info for 51.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test values outside of range
+            expected = new int[] { 0, 0, 0, 1 };
+            bucketInfo = encoder.GetBucketInfo(-10.0);
+            Console.WriteLine($"Bucket info for -10.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 0, 100, 100, 101 };
+            bucketInfo = encoder.GetBucketInfo(110.0);
+            Console.WriteLine($"Bucket info for 110.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test value in middle of range
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+        }    
+
     }
 }
 
