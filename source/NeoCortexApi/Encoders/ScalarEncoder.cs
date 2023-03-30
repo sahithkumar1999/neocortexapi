@@ -598,11 +598,106 @@ namespace NeoCortexApi.Encoders
         /// <returns></returns>
         public string GenerateRangeDescription(List<Tuple<double, double>> ranges)
         {
+            var desc = "";
+            var numRanges = ranges.Count;
+            for (var i = 0; i < numRanges; i++)
+            {
+                if (ranges[i].Item1 != ranges[i].Item2)
+                {
+                    desc += $"{ranges[i].Item1:F2}-{ranges[i].Item2:F2}";
+                }
+                else
+                {
+                    desc += $"{ranges[i].Item1:F2}";
+                }
+
+                if (i < numRanges - 1)
+                {
+                    desc += ", ";
+                }
+            }
+
+            return desc;
+        }
+
+        private string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> tuple)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void PPrint(double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> Decode(double[] output)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        /// <summary>
+        /// This method encodes an input value using the Scalar Encoder algorithm and returns an integer array as the output.
+        ///The input value is first converted to a double using the CultureInfo.InvariantCulture format.
+        ///The method checks if the input value is NaN and returns null if it is, otherwise it proceeds with encoding the value 
+        ///into an integer array using the Scalar Encoder algorithm.
+        /// </summary>
+        /// <param name="inputData">The inputData<see cref="object"/></param>
+        /// <returns>The <see cref="int[]"/></returns>
+        public override int[] Encode(object inputData)
+        {
+            int[] output = null;
+
+            double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
+            if (input == double.NaN)
+            {
+                return output;
+            }
+
+            int? bucketVal = GetFirstOnBit(input);
+            if (bucketVal != null)
+            {
+                output = new int[N];
+
+                int bucketIdx = bucketVal.Value;
+                //Arrays.fill(output, 0);
+                int minbin = bucketIdx;
+                int maxbin = minbin + 2 * HalfWidth;
+                if (Periodic)
+                {
+                    if (maxbin >= N)
+                    {
+                        int bottombins = maxbin - N + 1;
+                        int[] range = ArrayUtils.Range(0, bottombins);
+                        ArrayUtils.SetIndexesTo(output, range, 1);
+                        maxbin = N - 1;
+                    }
+                    if (minbin < 0)
+                    {
+                        int topbins = -minbin;
+                        ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(N - topbins, N), 1);
+                        minbin = 0;
+                    }
+                }
+
+                ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(minbin, maxbin + 1), 1);
+            }
+
+            // Output 1-D array of same length resulted in parameter N    
             return output;
         }
 
 
-
+        /// <summary>
+        /// This method calculates the closeness score between two sets of scalar values, expValues and actValues.
+        ///The method takes an optional boolean parameter 'fractional', which if set to true, calculates the closeness 
+        ///score as a fraction of the possible range of values.
+        ///The method returns an array containing the calculated closeness score.
+        /// </summary>
+        /// <param name="expValues"></param>
+        /// <param name="actValues"></param>
+        /// <param name="fractional"></param>
+        /// <returns></returns>
         public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
         {
             double expValue = expValues[0];
@@ -662,13 +757,43 @@ namespace NeoCortexApi.Encoders
         }
 
 
+        /// <summary>
+        /// This method calculates the lower and upper bounds of a given input value in a range of values.
+        ///It throws an exception if the input value is outside the encoder's range or is not a valid number.
+        ///It also prints the bucket width, bucket index, bucket lower bound, and bucket upper bound to the console.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="InvalidOperationException"></exception>
+        public double[] GetBucketValues(double input)
+        {
+            // Check for edge cases
+            if (double.IsNaN(input) || double.IsInfinity(input))
+            {
+                throw new ArgumentException("Input value is not a valid number.");
+            }
+            if (input < this.MinVal || input >= this.MaxVal)
+            {
+                throw new ArgumentException("Input value is outside of the encoder's range.");
+            }
+            NumBuckets = 100;
+            // Calculate the width of each bucket
+            double bucketWidth = (this.MaxVal - this.MinVal) / (double)this.NumBuckets;
+            if (double.IsInfinity(bucketWidth) || double.IsNaN(bucketWidth) || bucketWidth <= 0.0)
+            {
+                throw new InvalidOperationException("Bucket width is not valid.");
+            }
 
+            Console.WriteLine("bucketWidth: " + bucketWidth);
 
+            // Calculate the index of the bucket that the input falls into
+            int bucketIndex = (int)((input - this.MinVal) / bucketWidth);
+            Console.WriteLine("bucketIndex: " + bucketIndex);
 
-        //public static object Deserialize<T>(StreamReader sr, string name)
-        //{
-        //    var excludeMembers = new List<string> { nameof(ScalarEncoder.Properties) };
-        //    return HtmSerializer2.DeserializeObject<T>(sr, name, excludeMembers);
-        //}
-    }
-}
+            // Calculate the lower and upper bounds of the bucket
+            double bucketLowerBound = bucketIndex * bucketWidth + this.MinVal;
+            Console.WriteLine("bucketLowerBound: " + bucketLowerBound);
+
+            double bucketUpperBound = (bucketIndex + 1) * bucketWidth + this.MinVal;
+            Console.WriteLine("bucketUpperBound: " + bucketUpperBound);
