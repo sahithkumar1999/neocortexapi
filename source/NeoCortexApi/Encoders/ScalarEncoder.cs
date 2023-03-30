@@ -148,6 +148,55 @@ namespace NeoCortexApi.Encoders
             //Checks for likely mistakes in encoder settings
             if (IsRealCortexModel)
             {
+                if (W < 21 || W <= 2)
+                {
+                    throw new ArgumentException(
+                        "Number of bits in the SDR (%d) must be greater than 2, and recommended >= 21 (use forced=True to override)");
+                }
+            }
+        }
+
+        /// <summary>
+        /// This method initializes the encoder with the given parameters, such as w, minVal, maxVal, n, radius, and resolution.
+        ///It checks if the encoder is already initialized and if minVal and maxVal are valid.
+        ///If N is not set, it calculates N based on the given parameters and sets the Range and Resolution values accordingly.
+        /// </summary>
+        /// <param name="w"></param>
+        /// <param name="minVal"></param>
+        /// <param name="maxVal"></param>
+        /// <param name="n"></param>
+        /// <param name="radius"></param>
+        /// <param name="resolution"></param>
+        /// <exception cref="ArgumentException"></exception>
+        protected void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
+        {
+            if (N != 0)
+            {
+                if (double.NaN != minVal && double.NaN != maxVal)
+                {
+                    if (!Periodic)
+                    {
+                        Resolution = RangeInternal / (N - W);
+                    }
+                    else
+                    {
+                        Resolution = RangeInternal / N;
+                    }
+
+                    Radius = W * Resolution;
+
+                    if (Periodic)
+                    {
+                        Range = RangeInternal;
+                    }
+                    else
+                    {
+                        Range = RangeInternal + Resolution;
+                    }
+                }
+            }
+            else
+            {
                 if (radius != 0)
                 {
                     Resolution = Radius / w;
@@ -176,7 +225,19 @@ namespace NeoCortexApi.Encoders
             }
         }
 
-
+        /// <summary>
+        /// This method decodes an array of outputs based on the provided parameters, and returns an array of decoded inputs.
+        ///The decoding process involves identifying the runs of 1s in the output array, and mapping those runs to ranges of input 
+        ///values based on the specified minimum and maximum values.
+        ///If the periodic parameter is set to true, the decoded input array is checked for periodicity and adjusted if necessary.
+        /// </summary>
+        /// <param name="output"></param>
+        /// <param name="minVal"></param>
+        /// <param name="maxVal"></param>
+        /// <param name="n"></param>
+        /// <param name="w"></param>
+        /// <param name="periodic"></param>
+        /// <returns></returns>
         public static int[] decode(int[] output, int minVal, int maxVal, int n, double w, bool periodic)
         {
             List<int[]> runs = new List<int[]>();
@@ -198,6 +259,7 @@ namespace NeoCortexApi.Encoders
                 {
                     if (start == -1)
                     {
+                        start = i;
                     }
                     prev = i;
                     count++;
@@ -237,68 +299,6 @@ namespace NeoCortexApi.Encoders
                     }
                     if (val >= minVal && val <= maxVal)
                     {
-                        input.Add(val);
-                    }
-                }
-            }
-            input.Sort();
-            if (periodic && input.Count > 0)
-            {
-                int max = input[input.Count - 1];
-                if (max > maxVal)
-                {
-                    List<int> input2 = new List<int>();
-
-                    foreach (int val in input)
-                    {
-                        if (val <= maxVal)
-                        {
-                            input2.Add(val);
-                        }
-                    }
-                    input = input2;
-                    input2 = new List<int>();
-                    foreach (int val in input)
-                    {
-                        if (val >= minVal)
-                        {
-                            input2.Add(val);
-                        }
-                    }
-                    input = input2;
-                }
-            }
-            return input.ToArray();
-        }
-
-        private static double map(double val, double fromMin, double fromMax, double toMin, double toMax)
-        {
-            return (val - fromMin) * (toMax - toMin) / (fromMax - fromMin) + toMin;
-        }
-
-        private static int wrap(int val, int minVal, int maxVal)
-        {
-            int range = maxVal - minVal + 1;
-            while (val < minVal)
-            {
-                val += range;
-            }
-            while (val > maxVal)
-            {
-                val -= range;
-            }
-            return val;
-        }
-
-
-        /// <summary>
-        /// Gets the index of the first non-zero bit.
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns>Null in a case of an error.</returns>
-        /// <exception cref="ArgumentException"></exception>
-        protected int? GetFirstOnBit(double input)
-        {
             if (input == double.NaN)
             {
                 return null;
