@@ -198,12 +198,24 @@ namespace UnitTestsProject.EncoderTests
         [TestCategory("Experiment")]
         public void ScalarEncodingGetBucketIndexNonPeriodic()
         {
-            { "MaxVal", 100.0 },
+            string outFolder = nameof(ScalarEncodingGetBucketIndexNonPeriodic);
+
+            Directory.CreateDirectory(outFolder);
+
+            DateTime now = DateTime.Now;
+
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
                 { "Periodic", false},
                 { "Name", "scalar"},
                 { "ClipInput", false},
             });
-           
+
             for (decimal i = 0.0M; i < (long)encoder.MaxVal; i += 0.1M)
             {
                 var result = encoder.Encode(i);
@@ -215,56 +227,13 @@ namespace UnitTestsProject.EncoderTests
 
                 NeoCortexUtils.DrawBitmap(twoDimArray, 1024, 1024, $"{outFolder}\\{i}.png", Color.Gray, Color.Green, text: $"v:{i} /b:{bucketIndex}");
             }
- /*           
-            // Test case 1: Test GetBucketIndex method with a value below the minimum value
-            decimal value1 = -1;
-            int? expectedIndex1 = null;
-            int? actualIndex1 = encoder.GetBucketIndex(value1);
-            Assert.AreEqual(expectedIndex1, actualIndex1);
-
-            // Test case 2: Test GetBucketIndex method with a value above the maximum value
-            decimal value2 = 101;
-            int? expectedIndex2 = null;
-            int? actualIndex2 = encoder.GetBucketIndex(value2);
-            Assert.AreEqual(expectedIndex2, actualIndex2);
-
-            // Test case 3: Test GetBucketIndex method with a value that is not part of any bucket
-            decimal value3 = 25.7M;
-            int? expectedIndex3 = null;
-            int? actualIndex3 = encoder.GetBucketIndex(value3);
-            Assert.AreEqual(expectedIndex3, actualIndex3);
-
-
-            // Test case 4: Test GetBucketIndex method with a value that is part of a bucket
-            decimal value4 = 70.8M;
-            int? expectedIndex4 = 14;
-            int? actualIndex4 = encoder.GetBucketIndex(value4);
-            Assert.AreEqual(expectedIndex4, actualIndex4);
-
-
-
-            // Test case 5: Test GetBucketIndex method with a value that is equal to the minimum value
-            decimal value5 = 0;
-            int? expectedIndex5 = 0;
-            int? actualIndex5 = encoder.GetBucketIndex(value5);
-            Assert.AreEqual(expectedIndex5, actualIndex5);
-
-            // Test case 6: Test GetBucketIndex method with a value that is equal to the maximum value
-            decimal value6 = 100;
-            int? expectedIndex6 = 20;
-            int? actualIndex6 = encoder.GetBucketIndex(value6);
-            Assert.AreEqual(expectedIndex6, actualIndex6);
-
-
-            // Test case 7: Test GetBucketIndex method with a value that is equal to the center of a bucket
-            decimal value7 = 50;
-            int? expectedIndex7 = 10;
-            int? actualIndex7 = encoder.GetBucketIndex(value7);
-            Assert.AreEqual(expectedIndex7, actualIndex7);
-*/
-
         }
 
+        /// <summary>
+        /// This method tests the periodic scalar encoding by iterating over a range of decimal values and encoding each value to a bitmap.
+        ///For each encoded value, it also gets the corresponding bucket index and adds it as text to the bitmap.
+        ///The generated bitmaps are saved to a folder named after the test method.
+        /// </summary>
         [TestMethod]
         [TestCategory("Experiment")]
         public void ScalarEncodingGetBucketIndexPeriodic()
@@ -291,6 +260,7 @@ namespace UnitTestsProject.EncoderTests
             {
                 var result = encoder.Encode(i);
 
+                int? bucketIndex = encoder.GetBucketIndex(i);
 
                 int[,] twoDimenArray = ArrayUtils.Make2DArray<int>(result, (int)Math.Sqrt(result.Length), (int)Math.Sqrt(result.Length));
                 var twoDimArray = ArrayUtils.Transpose(twoDimenArray);
@@ -299,104 +269,134 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
-
-
-
-
-            /// <summary>
-            /// The DecodeTest
-            /// </summary>
-            /// <param name="input">The input<see cref="int"/></param>
-            public void DecodeTest(int input)
-        {
-        }
-
         /// <summary>
-        /// Demonstrates how to create an encoder by explicit invoke of initialization.
+        /// This test case tests the EncodeIntoArray method of the ScalarEncoder class to ensure it returns the correct encoded 
+        /// array for a range of input values.
+        ///The test iterates over a range of input values between 0 and 100 and compares the expected and actual encoded arrays for each value.
+        ///The test also generates a bitmap image for each input value, highlighting in red any elements of the actual encoded array that 
+        ///differ from the expected encoded array.
         /// </summary>
         [TestMethod]
-        public void InitTest1()
+        public void ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays()
         {
-            Dictionary<string, object> encoderSettings = getDefaultSettings();
+            double minValue = 0;
+            double maxValue = 100;
+            int numBits = 1024;
+            double period = maxValue - minValue;
 
-            // We change here value of Name property.
-            encoderSettings["Name"] = "hello";
+            ScalarEncoder encoder = new ScalarEncoder(numBits, minValue, Convert.ToInt32(maxValue), period);
 
-            // We add here new property.
-            encoderSettings.Add("TestProp1", "hello");
-
-            var encoder = new ScalarEncoderExperimental();
-
-            // Settings can also be passed by invoking Initialize(sett)
-            encoder.Initialize(encoderSettings);
-
-            // Property can also be set this way.
-            encoder["abc"] = "1";
-
-            Assert.IsTrue((string)encoder["TestProp1"] == "hello");
-
-            Assert.IsTrue((string)encoder["Name"] == "hello");
-
-            Assert.IsTrue((string)encoder["abc"] == "1");
-        }
-
-        /// <summary>
-        /// Initializes encoder and sets mandatory properties.
-        /// </summary>
-        [TestMethod]
-        public void InitTest2()
-        {
-            CortexNetworkContext ctx = new CortexNetworkContext();
-
-            Dictionary<string, object> encoderSettings = getDefaultSettings();
-
-            var encoder = ctx.CreateEncoder(typeof(ScalarEncoderExperimental).FullName, encoderSettings);
-
-            foreach (var item in encoderSettings)
+            for (double i = minValue; i <= maxValue; i += 0.1)
             {
-                Assert.IsTrue(item.Value == encoder[item.Key]);
+                int[] expectedArray = encoder.EncodeIntoArray(i);
+                int[] actualArrays = encoder.EncodeIntoArray(i);
+
+                Console.WriteLine($"i = {i}");
+                Console.WriteLine($"expectedArray = [{string.Join(",", expectedArray)}]");
+                Console.WriteLine($"actualArrays = [{string.Join(",", actualArrays)}]");
+
+
+                Assert.AreEqual(expectedArray.Length, actualArrays.Length);
+
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    Assert.AreEqual(expectedArray[j], actualArrays[j]);
+                }
+
+                string outFolder = nameof(ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays);
+
+                Directory.CreateDirectory(outFolder);
+
+                DateTime now = DateTime.Now;
+
+                Color bitmapColor = Color.Gray;
+
+                if (!expectedArray.SequenceEqual(actualArrays))
+                {
+                    bitmapColor = Color.Red;
+                }
+
+                int[,] twoDimArray = new int[expectedArray.Length, 1];
+                for (int j = 0; j < expectedArray.Length; j++)
+                {
+                    twoDimArray[j, 0] = expectedArray[j];
+                }
+
+                NeoCortexUtils.DrawBitmap(twoDimArray, expectedArray.Length, 1024, $"{outFolder}\\{i}.png", bitmapColor, Color.Green, text: $"v:{i} /b:{actualArrays}");
             }
         }
 
         /// <summary>
-        /// Demonstrates how to create an encoder and how to set encoder properties by using of context.
+        /// This is a unit test for the GenerateRangeDescription method of the ScalarEncoder class.
+        ///It tests the method with three different input ranges and verifies the output using Assert.AreEqual.
+        ///The test checks that the method generates the correct string representation of the input ranges.
         /// </summary>
         [TestMethod]
-        public void InitTest3()
+        public void TestGenerateRangeDescription()
         {
-            CortexNetworkContext ctx = new CortexNetworkContext();
+            var encoder = new ScalarEncoder(10, 0, 100, true);
 
-            // Gets set of default properties, which more or less every encoder requires.
-            Dictionary<string, object> encoderSettings = getDefaultSettings();
+            var ranges1 = new List<Tuple<double, double>>()
+            {
+                Tuple.Create(1.0, 3.0),
+                Tuple.Create(7.0, 10.0)
+            };
 
-            // We change here value of Name property.
-            encoderSettings["Name"] = "hello";
+            string actualRange1 = encoder.GenerateRangeDescription(ranges1);
+            string expectedRange1 = "1.00-3.00, 7.00-10.00";
+            Console.WriteLine($"Actual range 1: {actualRange1}");
+            Console.WriteLine($"Expected range 1: {expectedRange1}");
+            Assert.AreEqual(expectedRange1, actualRange1);
 
-            // We add here new property.
-            encoderSettings.Add("TestProp1", "hello");
+            var ranges2 = new List<Tuple<double, double>>()
+            {
+                Tuple.Create(2.5, 2.5)
+            };
 
-            var encoder = ctx.CreateEncoder(typeof(ScalarEncoderExperimental).FullName, encoderSettings);
+            string actualRange2 = encoder.GenerateRangeDescription(ranges2);
+            string expectedRange2 = "2.50";
+            Console.WriteLine($"Actual range 2: {actualRange2}");
+            Console.WriteLine($"Expected range 2: {expectedRange2}");
+            Assert.AreEqual(expectedRange2, actualRange2);
 
-            // Property can also be set this way.
-            encoder["abc"] = "1";
+            var ranges3 = new List<Tuple<double, double>>()
+            {
+                Tuple.Create(1.0, 1.0),
+                Tuple.Create(5.0, 6.0)
+            };
 
-            Assert.IsTrue((string)encoder["TestProp1"] == "hello");
-
-            Assert.IsTrue((string)encoder["Name"] == "hello");
-
-            Assert.IsTrue((string)encoder["abc"] == "1");
+            string actualRange3 = encoder.GenerateRangeDescription(ranges3);
+            string expectedRange3 = "1.00, 5.00-6.00";
+            Console.WriteLine($"Actual range 3: {actualRange3}");
+            Console.WriteLine($"Expected range 3: {expectedRange3}");
+            Assert.AreEqual(expectedRange3, actualRange3);
         }
 
         /// <summary>
-        /// Demonstrates how to create an encoder by explicit invoke of initialization.
+        /// This test case checks the closeness score calculation of a scalar encoder with periodic input.
+        ///It creates an instance of the encoder and passes in the necessary parameters.
+        ///It then compares the expected and actual closeness scores and outputs them using Console.WriteLine.
         /// </summary>
         [TestMethod]
-        public void InitTest4()
+        public void ClosenessScorestest1()
         {
-            Dictionary<string, object> encoderSettings = getDefaultSettings();
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", true},
+                { "Name", "scalar_periodic"},
+                { "ClipInput", false},
+            });
 
-            // We change here value of Name property.
-            encoderSettings["Name"] = "hello";
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 51 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
 
             // We add here new property.
             encoderSettings.Add("TestProp1", "hello");
