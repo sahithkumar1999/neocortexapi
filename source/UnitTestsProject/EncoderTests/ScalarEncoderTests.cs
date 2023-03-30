@@ -3,14 +3,28 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoCortex;
 using NeoCortexApi.Encoders;
+using NeoCortexApi.Entities;
 using NeoCortexApi.Network;
 using NeoCortexApi.Utility;
+using NeoCortexEntities.NeuroVisualizer;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Ocsp;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using static SkiaSharp.SKPath;
+using System.Xml.Linq;
+using static System.Net.Mime.MediaTypeNames;
+using Org.BouncyCastle.Crypto;
+using Microsoft.VisualStudio.TestPlatform.Utilities;
+using System.Text;
+using static SkiaSharp.SKImageFilter;
+using LearningFoundation;
+using Org.BouncyCastle.Utilities;
 
 namespace UnitTestsProject.EncoderTests
 {
@@ -120,15 +134,14 @@ namespace UnitTestsProject.EncoderTests
                     { "ClipInput", true},
                 });
 
-            //for (int i = 1; i < 367; i++)
-            //{
+
             var result = encoder.Encode(input);
 
             Debug.WriteLine(input);
 
             Debug.WriteLine(NeoCortexApi.Helpers.StringifyVector(result));
             Debug.WriteLine(NeoCortexApi.Helpers.StringifyVector(expectedResult));
-            //}          
+
 
             Assert.IsTrue(expectedResult.SequenceEqual(result));
         }
@@ -177,7 +190,7 @@ namespace UnitTestsProject.EncoderTests
 
             //Assert.IsTrue(expectedResult.SequenceEqual(result));
         }
-        
+
         /// <summary>
         /// Encodes a set of numbers and produces bitmap output.
         /// </summary>
@@ -185,19 +198,7 @@ namespace UnitTestsProject.EncoderTests
         [TestCategory("Experiment")]
         public void ScalarEncodingGetBucketIndexNonPeriodic()
         {
-            string outFolder = nameof(ScalarEncodingGetBucketIndexNonPeriodic);
-
-            Directory.CreateDirectory(outFolder);
-
-            DateTime now = DateTime.Now;
-
-            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
-            {
-                { "W", 21},
-                { "N", 1024},
-                { "Radius", -1.0},
-                { "MinVal", 0.0},
-                { "MaxVal", 100.0 },
+            { "MaxVal", 100.0 },
                 { "Periodic", false},
                 { "Name", "scalar"},
                 { "ClipInput", false},
