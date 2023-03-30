@@ -448,156 +448,156 @@ namespace NeoCortexApi.Encoders
                         throw new ArgumentException($"Input ({input}) greater than periodic range ({MinVal} - {MaxVal}");
                     }
                     int? bucketVal = GetFirstOnBit(input);
-            // For periodic encoders, the bucket index is the index of the center bit
-            if (this.Periodic)
-            {
-                // None is returned for missing value
-                for (int i = 0; i < this.N; i++)
-                {
-                    output[i] = 0;
                 }
-                // TODO: should all 1s, or random SDR be returned instead?
             }
 
+            int centerbin;
+            if (Periodic)
+            {
+                centerbin = (int)((input - MinVal) * NInternal / Range + Padding);
+            }
             else
             {
-                // The bucket index is the index of the first bit to set in the output
-                for (int i = 0; i < this.N; i++)
-                {
-                    output[i] = 0;
-                }
-
-                minbin = (int)bucketVal;
-                int maxbin = minbin + 2 * HalfWidth;
-
-                if (this.Periodic)
-                {
-                    // Handle the edges by computing wrap-around
-                    if (maxbin >= this.N)
-                    {
-                        int bottombins = maxbin - this.N + 1;
-                        for (int i = 0; i < bottombins; i++)
-                        {
-                            output[i] = 1;
-                        }
-                        maxbin = this.N - 1;
-                    }
-
-                    if (minbin < 0)
-                    {
-                        int topbins = -minbin;
-                        for (int i = this.N - topbins; i < this.N; i++)
-                        {
-                            output[i] = 1;
-                        }
-                        minbin = 0;
-                    }
-                }
-
-                Debug.Assert(minbin >= 0);
-                Debug.Assert(maxbin < this.N);
-
-                for (int i = minbin; i <= maxbin; i++)
-                {
-                    output[i] = 1;
-                }
+                centerbin = ((int)(((input - MinVal) + Resolution / 2) / Resolution)) + Padding;
             }
-            int verbosity = 0;
-            // Debug the decode() method
-            if (verbosity >= 2)
-            {
-                Console.WriteLine();
-                Console.WriteLine("input: " + input);
-                Console.WriteLine("range: " + MinVal + " - " + MaxVal);
-                Console.WriteLine("n: " + this.N + " w: " + this.W + " resolution: " + this.Resolution +
-                                  " radius: " + this.Radius + " periodic: " + this.Periodic);
-                Console.Write("output: ");
-                PPrint(output);
-                Console.WriteLine("input desc: " + DecodedToStr(Decode(output)));
-            }
-            return 0;
 
+            return centerbin - HalfWidth;
         }
 
-        private string DecodedToStr(Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> tuple)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void PPrint(double[] output)
-        {
-            throw new NotImplementedException();
-        }
-
-        private Tuple<Dictionary<string, Tuple<List<int>, string>>, List<string>> Decode(double[] output)
-        {
-            throw new NotImplementedException();
-        }
-
-
-
-
-        /*
-                public int? GetBucketIndex(object inputData)
-                {
-                    double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
-                    if (input == double.NaN)
-                    {
-                        return null;
-                    }
-
-                    int? bucketVal = GetFirstOnBit(input);
-                List<int> searchStr = Enumerable.Repeat(1, i + 3).ToList();
-             
-                    return bucketVal;
-                }
-               */
 
         /// <summary>
-        /// The Encode
+        /// Gets the bucket index of the given value.
         /// </summary>
-        /// <param name="inputData">The inputData<see cref="object"/></param>
-        /// <returns>The <see cref="int[]"/></returns>
-        public override int[] Encode(object inputData)
-        {
-            int[] output = null;
+        /// <param name="inputData">The data to be encoded. Must be of type double.</param>
+        /// <param name="bucketIndex">The bucket index.</param>
+        /// <returns></returns>
 
-            double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
-            if (input == double.NaN)
+        public int? GetBucketIndex(decimal inputData)
+        {
+            if ((double)inputData < MinVal || (double)inputData > MaxVal)
             {
-                return output;
+                return null;
             }
 
-            int? bucketVal = GetFirstOnBit(input);
-            if (bucketVal != null)
-            {
-                output = new int[N];
+            decimal fraction = (decimal)(((double)inputData - MinVal) / (MaxVal - MinVal));
 
-                int bucketIdx = bucketVal.Value;
-                //Arrays.fill(output, 0);
-                int minbin = bucketIdx;
-                int maxbin = minbin + 2 * HalfWidth;
-                if (Periodic)
+            if (Periodic)
+            {
+                fraction = fraction - Math.Floor(fraction);
+            }
+
+            int bucketIndex = (int)Math.Floor(fraction * N);
+
+            if (bucketIndex == N)
+            {
+                bucketIndex = 0;
+            }
+
+            // For periodic encoders, the center of the first bucket is considered equal to the center of the last bucket
+            if (Periodic && bucketIndex == 0 && Math.Abs((double)inputData - MaxVal) <= 0.0000000000000000000000000001)
+            {
+                bucketIndex = N - 1;
+            }
+
+            // Check if the input value is within the radius of the bucket
+            if (Radius >= 0)
+            {
+                decimal bucketWidth = ((decimal)MaxVal - (decimal)MinVal) / (decimal)N;
+                decimal bucketCenter = (bucketWidth * bucketIndex) + (bucketWidth / 2) + (decimal)MinVal;
+
+                if (Math.Abs((decimal)inputData - bucketCenter) > (decimal)Radius * bucketWidth)
                 {
-                    if (maxbin >= N)
-                    {
-                        int bottombins = maxbin - N + 1;
-                        int[] range = ArrayUtils.Range(0, bottombins);
-                        ArrayUtils.SetIndexesTo(output, range, 1);
-                        maxbin = N - 1;
-                    }
-                    if (minbin < 0)
-                    {
-                        int topbins = -minbin;
-                        ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(N - topbins, N), 1);
-                        minbin = 0;
-                    }
+                    return null;
+                }
+            }
+
+            return bucketIndex;
+
+        }
+
+        /// <summary>
+        /// This code calculates bucket information for a scalar value based on the provided encoder parameters. 
+        /// It first clips the input value to the specified range, calculates the bucket index and center, and then 
+        /// calculates the bucket bounds. It also handles periodic encoding by wrapping the bucket index and choosing 
+        /// the closest edge as the bucket center. The function returns an integer array containing the bucket index, 
+        /// the rounded bucket center, and the rounded bucket start and end points.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public int[] GetBucketInfo(double input)
+        {
+            // Clip input to range
+            if (input < MinVal)
+            {
+                input = MinVal;
+            }
+            else if (input > MaxVal)
+            {
+                input = MaxVal;
+            }
+
+            // Calculate bucket index
+            double bucketWidth = (MaxVal - MinVal) / N;
+            int bucketIndex = (int)((input - MinVal) / bucketWidth);
+
+            // Calculate bucket center
+            double bucketCenter = MinVal + (bucketIndex + 0.5) * bucketWidth;
+
+            // Calculate bucket bounds
+            double bucketStart = MinVal + bucketIndex * bucketWidth;
+            double bucketEnd = MinVal + (bucketIndex + 1) * bucketWidth;
+
+            // Handle periodic encoding
+            if (Periodic)
+            {
+                // Wrap bucket index
+                if (bucketIndex < 0)
+                {
+                    bucketIndex += N;
+                }
+                else if (bucketIndex >= N)
+                {
+                    bucketIndex -= N;
                 }
 
-                ArrayUtils.SetIndexesTo(output, ArrayUtils.Range(minbin, maxbin + 1), 1);
+                // Calculate distance to nearest edge
+                double distToStart = input - bucketStart;
+                double distToEnd = bucketEnd - input;
+
+                if (distToStart < 0)
+                {
+                    distToStart += MaxVal - MinVal;
+                }
+                if (distToEnd < 0)
+                {
+                    distToEnd += MaxVal - MinVal;
+                }
+
+                // Choose the closest edge as bucket center
+                if (distToStart < distToEnd)
+                {
+                    bucketCenter = bucketStart;
+                }
+                else
+                {
+                    bucketCenter = bucketEnd;
+                }
             }
 
-            // Output 1-D array of same length resulted in parameter N    
+            return new int[] { bucketIndex, (int)Math.Round(bucketCenter), (int)Math.Round(bucketStart), (int)Math.Round(bucketEnd) };
+        }
+
+
+
+        /// <summary>
+        /// This method takes a list of ranges and returns a string that describes them.
+        ///It iterates through the list of ranges and constructs the string by appending each range's start and end values.
+        ///If the start and end values of a range are the same, it only appends the start value to the string.
+        /// </summary>
+        /// <param name="ranges"></param>
+        /// <returns></returns>
+        public string GenerateRangeDescription(List<Tuple<double, double>> ranges)
+        {
             return output;
         }
 
