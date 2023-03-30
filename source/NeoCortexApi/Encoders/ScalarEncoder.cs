@@ -2,12 +2,20 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 using NeoCortexApi.Entities;
 using NeoCortexApi.Utility;
+using NeoCortexEntities.NeuroVisualizer;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Buffers.Text;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace NeoCortexApi.Encoders
@@ -34,11 +42,42 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public override int Width => throw new NotImplementedException();
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ScalarEncoderExperimental"/> class.
-        /// </summary>
-        public ScalarEncoder()
+        public int NumBits { get; private set; }
+        public double PeriodicRadius { get; private set; }
+        public double BucketWidth { get; private set; }
+        public int NumBuckets { get; private set; }
+        public double[] Centers { get; private set; }
+
+
+        public ScalarEncoder(double minValue, double maxValue, int numBits, double period = 0, double periodicRadius = 0)
         {
+            BucketWidth = (maxValue - minValue) / (numBits - (period > 0 ? 2 : 1));
+            this.NumBuckets = numBits - (period > 0 ? 1 : 0);
+            this.NumBits = numBits;
+            this.PeriodicRadius = periodicRadius;
+
+            if (period > 0)
+            {
+                // Calculate the centers for a periodic encoder
+                this.Centers = new double[this.NumBuckets];
+                double halfWidth = this.BucketWidth / 2.0;
+                double periodOffset = period / 2.0;
+                for (int i = 0; i < this.NumBuckets; i++)
+                {
+                    double center = minValue + halfWidth + i * this.BucketWidth;
+                    this.Centers[i] = ((center + periodOffset) % period) - periodOffset;
+                }
+            }
+            else
+            {
+                // Calculate the centers for a non-periodic encoder
+                this.Centers = new double[this.NumBuckets];
+                double halfWidth = this.BucketWidth / 2.0;
+                for (int i = 0; i < this.NumBuckets; i++)
+                {
+                    this.Centers[i] = minValue + halfWidth + i * this.BucketWidth;
+                }
+            }
         }
 
         /// <summary>
@@ -47,7 +86,7 @@ namespace NeoCortexApi.Encoders
         /// <param name="encoderSettings">The encoderSettings<see cref="Dictionary{string, object}"/></param>
         public ScalarEncoder(Dictionary<string, object> encoderSettings)
         {
-            this.Initialize(encoderSettings); public ScalarEncoder()
+            this.Initialize(encoderSettings);
         }
 
         public ScalarEncoder(int v1, int v2, int v3, bool v4)
@@ -108,44 +147,6 @@ namespace NeoCortexApi.Encoders
 
             //Checks for likely mistakes in encoder settings
             if (IsRealCortexModel)
-            {
-                if (W < 21 || W <= 2)
-                {
-                    throw new ArgumentException(
-                        "Number of bits in the SDR (%d) must be greater than 2, and recommended >= 21 (use forced=True to override)");
-                }
-            }
-        }
-
-
-        protected void InitEncoder(int w, double minVal, double maxVal, int n, double radius, double resolution)
-        {
-            if (N != 0)
-            {
-                if (double.NaN != minVal && double.NaN != maxVal)
-                {
-                    if (!Periodic)
-                    {
-                        Resolution = RangeInternal / (N - W);
-                    }
-                    else
-                    {
-                        Resolution = RangeInternal / N;
-                    }
-
-                    Radius = W * Resolution;
-
-                    if (Periodic)
-                    {
-                        Range = RangeInternal;
-                    }
-                    else
-                    {
-                        Range = RangeInternal + Resolution;
-                    }
-                }
-            }
-            else
             {
                 if (radius != 0)
                 {
