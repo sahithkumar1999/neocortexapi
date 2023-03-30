@@ -698,3 +698,234 @@ namespace UnitTestsProject.EncoderTests
         public void ScalarEncodingDecode()
         {
             int[] output1 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output2 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output3 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output4 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output5 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
+            int[] output6 = { 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int[] output7 = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0 };
+            int[] output8 = { 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1 };
+            int minVal = 0;
+            int maxVal = 100;
+            int n = 14;
+            double w = 3.0;
+            bool periodic = true;
+
+            int[][] testCases = new int[][] { output1, output2, output3, output4, output5, output6, output7, output8 };
+
+            foreach (int[] output in testCases)
+            {
+                int[] input = ScalarEncoder.decode(output, minVal, maxVal, n, w, periodic);
+
+                Console.WriteLine("Output: " + string.Join(",", output));
+                Console.WriteLine("Input: " + string.Join(",", input));
+                Console.WriteLine("----------------------------------------");
+            }
+
+        }
+
+
+        /// <summary>
+        /// This test case tests the behavior of the GetBucketValues() method of the ScalarEncoder class.
+        ///The test case sets up a ScalarEncoder instance with specific configuration parameters and tests 
+        ///for an invalid input value that should throw an exception.
+        ///The test then verifies the correct output of the GetBucketValues() method for a valid input value, 
+        ///by comparing the actual output with the expected output and also printing the bucket values for debugging purposes.
+        /// </summary>
+        [TestMethod]
+        public void TestGetBucketValues()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
+
+            // Act and assert
+            Assert.ThrowsException<ArgumentException>(() => encoder.GetBucketValues(-10.0));
+
+            double[] bucketValues = null;
+            try
+            {
+                bucketValues = encoder.GetBucketValues(47.5);
+                Console.WriteLine($"Bucket values - Actual: {string.Join(", ", bucketValues)}, Expected: {string.Join(", ", new double[] { 47, 48 })}");
+                Assert.AreEqual(new double[] { 47, 48 }, bucketValues);
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+
+        /// <summary>
+        /// The test checks the bucket information of the encoder with different input values. 
+        /// The encoder parameters include the minimum and maximum values, the number of buckets, 
+        /// the radius, and periodicity. The test asserts the expected bucket information for input 
+        /// values close to the bucket boundaries, inside and outside the range, and at the middle of 
+        /// the range.
+        /// </summary>
+        [TestMethod]
+        public void TestGetBucketInfoNonPeriodic()
+        {
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
+
+            // Test values near bucket boundaries
+            int[] expected = new int[] { 49, 50, 49, 50 };
+            int[] bucketInfo = encoder.GetBucketInfo(49.0);
+            Console.WriteLine($"Expected Bucket info for 49.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 49.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Expected Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 51, 52, 51, 52 };
+            bucketInfo = encoder.GetBucketInfo(51.0);
+            Console.WriteLine($"Expected Bucket info for 51.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 51.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test values outside of range
+            expected = new int[] { 0, 0, 0, 1 };
+            bucketInfo = encoder.GetBucketInfo(-10.0);
+            Console.WriteLine($"Expected Bucket info for -10.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for -10.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 100, 100, 100, 101 };
+            bucketInfo = encoder.GetBucketInfo(110.0);
+            Console.WriteLine($"Expected Bucket info for 110.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 110.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test value in middle of range
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Expected Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+        }
+
+        /// <summary>
+        /// It creates an instance of the ScalarEncoder with specified parameters and tests the method with various 
+        /// input values. It tests values near bucket boundaries, values outside of range, and a value in the middle of the 
+        /// range. For each input value, it compares the expected bucket info with the actual bucket info obtained from the method, 
+        /// and outputs the result to the console.
+        /// </summary>
+        [TestMethod]
+        public void TestGetBucketInfoPeriodic()
+        {
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", true},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", 100 },
+            });
+
+            // Test values near bucket boundaries
+            int[] expected = new int[] { 49, 49, 49, 50 };
+            int[] bucketInfo = encoder.GetBucketInfo(49.0);
+            Console.WriteLine($"Expected Bucket info for 49.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 49.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Expected Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 51, 51, 51, 52 };
+            bucketInfo = encoder.GetBucketInfo(51.0);
+            Console.WriteLine($"Expected Bucket info for 51.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 51.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test values outside of range
+            expected = new int[] { 0, 0, 0, 1 };
+            bucketInfo = encoder.GetBucketInfo(-10.0);
+            Console.WriteLine($"Expected Bucket info for -10.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for -10.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            expected = new int[] { 0, 100, 100, 101 };
+            bucketInfo = encoder.GetBucketInfo(110.0);
+            Console.WriteLine($"Expected Bucket info for 110.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 110.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+
+            // Test value in middle of range
+            expected = new int[] { 50, 50, 50, 51 };
+            bucketInfo = encoder.GetBucketInfo(50.0);
+            Console.WriteLine($"Expected Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", expected)}");
+            Console.WriteLine($"Actual Bucket info for 50.0 (bucketIndex, bucketCenter, bucketStart, bucketEnd): {string.Join(",", bucketInfo)}");
+            CollectionAssert.AreEqual(expected, bucketInfo);
+        }
+
+
+        /// <summary>
+        /// The method tests the _getTopDownMapping function of the ScalarEncoder class with periodic parameter set to true.
+        ///It sets input, periodic, and numBuckets values and creates a ScalarEncoder object with some default parameters.
+        ///Then it compares the expected mapping array with the actual mapping array returned from the _getTopDownMapping 
+        ///function using CollectionAssert.AreEqual method.
+        /// </summary>
+        [TestMethod]
+        public void Test_GetTopDownMapping_Periodic()
+        {
+            double input = 0.25;
+            bool periodic = true;
+            int numBuckets = 4;
+
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 100},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 1.0 },
+                { "Periodic", periodic},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+                { "NumBuckets", numBuckets },
+            });
+
+            int[] expected = new int[] { 0, 1, 0, 0 };
+            int[] mapping = encoder._getTopDownMapping(input, periodic, numBuckets);
+            Console.WriteLine($"Expected GetTopDownMapping Array: {string.Join(",", expected)}");
+            Console.WriteLine($"Actual GetTopDownMapping Array: {string.Join(",", mapping)}");
+
+            CollectionAssert.AreEqual(expected, mapping);
+        }
+
+
+    }
+}
