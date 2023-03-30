@@ -398,6 +398,221 @@ namespace UnitTestsProject.EncoderTests
             bool fractional = true;
             double expectedCloseness = 0.99;
 
+            // Act
+            double[] actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional);
+
+            // Assert
+            Console.WriteLine("Expected closeness: " + expectedCloseness);
+            Console.WriteLine("Actual closeness: " + actualCloseness[0]);
+            Assert.AreEqual(expectedCloseness, actualCloseness[0], 0.01);
+        }
+
+
+        /// <summary>
+        /// This test case checks the closeness score calculation of the ScalarEncoder with non-periodic encoding.
+        ///The test input consists of an expected value, an actual value, and a maximum allowed difference.
+        ///The expected closeness score, actual closeness score, and the maximum difference are printed to the console before assertion.
+        /// </summary>
+        [TestMethod]
+        public void ClosenessScorestest2()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+            });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 50.3 };
+            bool fractional = true;
+            double expectedCloseness = 0.99;
+            double maxDifference = 0.01;
+
+            // Act
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+
+            // Assert
+            Console.WriteLine($"Expected closeness: {expectedCloseness}");
+            Console.WriteLine($"Actual closeness: {actualCloseness}");
+            Console.WriteLine($"Max difference: {maxDifference}");
+
+            Assert.AreEqual(expectedCloseness, actualCloseness, maxDifference);
+        }
+
+        /// <summary>
+        /// This test case checks the closeness score of two arrays of scalar values using the ScalarEncoder class.
+        ///The test initializes the encoder with specific parameters and provides expected and actual values for the closeness score.
+        ///Print statements are included to display the expected and actual closeness scores, and an assertion is made to ensure that 
+        ///they match within a tolerance of 0.01.
+        /// </summary>
+        [TestMethod]
+        public void ClosenessScorestest3()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21 },
+                { "N", 1024 },
+                { "Radius", -1.0 },
+                { "MinVal", 0.0 },
+                { "MaxVal", 100.0 },
+                { "Periodic", true },
+                { "Name", "scalar_periodic" },
+                { "ClipInput", false },
+            });
+
+            double[] expValues = new double[] { 50 };
+            double[] actValues = new double[] { 70 };
+            bool fractional = true;
+            double expectedCloseness = 0.8;
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+
+            // Print statements
+            Console.WriteLine("Expected Closeness: " + expectedCloseness);
+            Console.WriteLine("Actual Closeness: " + actualCloseness);
+
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01, $"Expected closeness: {expectedCloseness}, Actual closeness: {actualCloseness}");
+        }
+
+
+        /// <summary>
+        /// This test case tests the ClosenessScores() method of the ScalarEncoder class.
+        ///The test case checks the closeness score of two values, one expected and one actual, using a non-periodic scalar encoder.
+        ///The expected and actual closeness scores are compared with a tolerance of 0.01 using Assert.AreEqual().
+        /// </summary>
+        [TestMethod]
+        public void ClosenessScoresTest4()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar_nonperiodic"},
+                { "ClipInput", false},
+            });
+
+            double[] expValues = new double[] { 25 };
+            double[] actValues = new double[] { 75 };
+            bool fractional = true;
+            double expectedCloseness = 0.5;
+
+            // Act
+            double actualCloseness = encoder.ClosenessScores(expValues, actValues, fractional)[0];
+            Console.WriteLine("Expected closeness: " + expectedCloseness);
+            Console.WriteLine("Actual closeness: " + actualCloseness);
+
+            // Assert
+            Assert.AreEqual(expectedCloseness, actualCloseness, 0.01);
+        }
+
+
+        /// <summary>
+        /// The DecodeTest
+        /// </summary>
+        /// <param name="input">The input<see cref="int"/></param>
+        public void DecodeTest(int input)
+        {
+        }
+
+        /// <summary>
+        /// Demonstrates how to create an encoder by explicit invoke of initialization.
+        /// </summary>
+        [TestMethod]
+        public void InitTest1()
+        {
+            Dictionary<string, object> encoderSettings = getDefaultSettings();
+
+            // We change here value of Name property.
+            encoderSettings["Name"] = "hello";
+
+            // We add here new property.
+            encoderSettings.Add("TestProp1", "hello");
+
+            var encoder = new ScalarEncoderExperimental();
+
+            // Settings can also be passed by invoking Initialize(sett)
+            encoder.Initialize(encoderSettings);
+
+            // Property can also be set this way.
+            encoder["abc"] = "1";
+
+            Assert.IsTrue((string)encoder["TestProp1"] == "hello");
+
+            Assert.IsTrue((string)encoder["Name"] == "hello");
+
+            Assert.IsTrue((string)encoder["abc"] == "1");
+        }
+
+        /// <summary>
+        /// Initializes encoder and sets mandatory properties.
+        /// </summary>
+        [TestMethod]
+        public void InitTest2()
+        {
+            CortexNetworkContext ctx = new CortexNetworkContext();
+
+            Dictionary<string, object> encoderSettings = getDefaultSettings();
+
+            var encoder = ctx.CreateEncoder(typeof(ScalarEncoderExperimental).FullName, encoderSettings);
+
+            foreach (var item in encoderSettings)
+            {
+                Assert.IsTrue(item.Value == encoder[item.Key]);
+            }
+        }
+
+        /// <summary>
+        /// Demonstrates how to create an encoder and how to set encoder properties by using of context.
+        /// </summary>
+        [TestMethod]
+        public void InitTest3()
+        {
+            CortexNetworkContext ctx = new CortexNetworkContext();
+
+            // Gets set of default properties, which more or less every encoder requires.
+            Dictionary<string, object> encoderSettings = getDefaultSettings();
+
+            // We change here value of Name property.
+            encoderSettings["Name"] = "hello";
+
+            // We add here new property.
+            encoderSettings.Add("TestProp1", "hello");
+
+            var encoder = ctx.CreateEncoder(typeof(ScalarEncoderExperimental).FullName, encoderSettings);
+
+            // Property can also be set this way.
+            encoder["abc"] = "1";
+
+            Assert.IsTrue((string)encoder["TestProp1"] == "hello");
+
+            Assert.IsTrue((string)encoder["Name"] == "hello");
+
+            Assert.IsTrue((string)encoder["abc"] == "1");
+        }
+
+        /// <summary>
+        /// Demonstrates how to create an encoder by explicit invoke of initialization.
+        /// </summary>
+        [TestMethod]
+        public void InitTest4()
+        {
+            Dictionary<string, object> encoderSettings = getDefaultSettings();
+
+            // We change here value of Name property.
+            encoderSettings["Name"] = "hello";
+
             // We add here new property.
             encoderSettings.Add("TestProp1", "hello");
 
@@ -439,8 +654,6 @@ namespace UnitTestsProject.EncoderTests
             }
         }
 
-
-
         /// <summary>
         /// The getDefaultSettings
         /// </summary>
@@ -471,43 +684,17 @@ namespace UnitTestsProject.EncoderTests
             return encoderSettings;
         }
 
+
+
+
+
+        /// <summary>
+        /// This is a test case for decoding the output of ScalarEncoder into input values.
+        ///Eight test cases are executed using different output values and the expected input values are computed using the decode function.
+        ///The actual input values and the expected input values are printed for each test case to verify the correctness of the decoding algorithm.
+        /// </summary>
         [TestMethod]
-        public void TestClosenessScores()
+        [TestCategory("Encoding")]
+        public void ScalarEncodingDecode()
         {
-            // Test case 1 - fractional closeness score
-            double[] expValues1 = { 10 };
-            double[] actValues1 = { 5 };
-            double[] expectedOutput1 = { 0.5 };
-            double[] actualOutput1 = ClosenessScores(expValues1, actValues1);
-            CollectionAssert.AreEqual(expectedOutput1, actualOutput1);
-
-            // Test case 2 - non-fractional closeness score
-            double[] expValues2 = { 5 };
-            double[] actValues2 = { 3 };
-            double[] expectedOutput2 = { 2 };
-            double[] actualOutput2 = TestClosenessScores(expValues2, actValues2, false);
-            CollectionAssert.AreEqual(expectedOutput2, actualOutput2);
-
-            // Test case 3 - periodic, fractional closeness score
-            double[] expValues3 = { 350 };
-            double[] actValues3 = { 10 };
-            double[] expectedOutput3 = { 0.02777777777777779 };
-            double[] actualOutput3 = ClosenessScores(expValues3, actValues3);
-            CollectionAssert.AreEqual(expectedOutput3, actualOutput3);
-
-            // Test case 4 - periodic, non-fractional closeness score
-            double[] expValues4 = { 300 };
-            double[] actValues4 = { 400 };
-            double[] expectedOutput4 = { 100 };
-            double[] actualOutput4 = TestClosenessScores(expValues4, actValues4, false);
-            CollectionAssert.AreEqual(expectedOutput4, actualOutput4);
-        }
-
-        private double[] ClosenessScores(double[] expValues1, double[] actValues1)
-        {
-            throw new NotImplementedException();
-        }
-    }
-}
-
-
+            int[] output1 = { 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0 };
