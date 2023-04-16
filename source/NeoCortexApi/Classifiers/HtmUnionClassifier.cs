@@ -30,11 +30,6 @@ namespace NeoCortexApi.Classifiers
             return (TIN)charOutput;
         }
 
-        public List<ClassifierResult<TIN>> GetPredictedInputValues(int[] cellIndicies, short howMany = 1)
-        {
-            throw new System.NotImplementedException();
-        }
-
         //private Dictionary<TIN, int[]> activeMap = new Dictionary<TIN, int[]>();
 
         //public void Learn(TIN input, Cell[] activeCells, bool learn)

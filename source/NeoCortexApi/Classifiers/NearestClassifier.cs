@@ -66,11 +66,7 @@ namespace NeoCortexApi.Classifiers
         //    return null;
         //}
 
-        public override int GetHashCode()
-        {
-            // TODO: Implement a unique hash code for your class
-            return base.GetHashCode();
-        }
+
 
 
         private static byte[] FlatArray(Cell[] output)

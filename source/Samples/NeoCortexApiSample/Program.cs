@@ -28,11 +28,8 @@ namespace NeoCortexApiSample
             //SequenceLearning experiment = new SequenceLearning();
             //experiment.Run();
 
-            //GridCellSamples gridCells = new GridCellSamples();
-            //gridCells.Run();
-
            // RunMultiSimpleSequenceLearningExperiment();
-           RunMultiSequenceLearningExperiment();   
+           RunMultiSequenceLearningExperiment();
         }
 
         private static void RunMultiSimpleSequenceLearningExperiment()
@@ -71,7 +68,6 @@ namespace NeoCortexApiSample
             var predictor = experiment.Run(sequences);
 
             //
-
             // These list are used to see how the prediction works.
             // Predictor is traversing the list element by element. 
             // By providing more elements to the prediction, the predictor delivers more precise result.
