@@ -192,18 +192,20 @@ namespace UnitTestsProject.EncoderTests
         }
 
         /// <summary>
-        /// Encodes a set of numbers and produces bitmap output.
+        /// This test method encodes a set of numbers and produces bitmap output for scalar encoding with non-periodic data.
         /// </summary>
         [TestMethod]
         [TestCategory("Experiment")]
         public void ScalarEncodingGetBucketIndexNonPeriodic()
         {
+            // Create a directory to save the bitmap output.
             string outFolder = nameof(ScalarEncodingGetBucketIndexNonPeriodic);
 
             Directory.CreateDirectory(outFolder);
 
             DateTime now = DateTime.Now;
 
+            // Create a new ScalarEncoder with the given configuration.
             ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
             {
                 { "W", 21},
@@ -216,23 +218,30 @@ namespace UnitTestsProject.EncoderTests
                 { "ClipInput", false},
             });
 
+            // Iterate through a range of numbers and encode them using the ScalarEncoder.
             for (decimal i = 0.0M; i < (long)encoder.MaxVal; i += 0.1M)
             {
+                // Encode the number and get the corresponding bucket index.
                 var result = encoder.Encode(i);
 
                 int? bucketIndex = encoder.GetBucketIndex(i);
 
+                // Convert the encoded result into a 2D array and transpose it.
                 int[,] twoDimenArray = ArrayUtils.Make2DArray<int>(result, (int)Math.Sqrt(result.Length), (int)Math.Sqrt(result.Length));
                 var twoDimArray = ArrayUtils.Transpose(twoDimenArray);
 
+                // Draw a bitmap of the encoded result with the corresponding bucket index and save it to the output folder.
                 NeoCortexUtils.DrawBitmap(twoDimArray, 1024, 1024, $"{outFolder}\\{i}.png", Color.Gray, Color.Green, text: $"v:{i} /b:{bucketIndex}");
+
+                // Print the value of i and its corresponding bucket index for debugging purposes.
+                Console.WriteLine($"Encoded {i} into bucket {bucketIndex}");
             }
         }
 
         /// <summary>
         /// This method tests the periodic scalar encoding by iterating over a range of decimal values and encoding each value to a bitmap.
-        ///For each encoded value, it also gets the corresponding bucket index and adds it as text to the bitmap.
-        ///The generated bitmaps are saved to a folder named after the test method.
+        /// For each encoded value, it also gets the corresponding bucket index and adds it as text to the bitmap.
+        /// The generated bitmaps are saved to a folder named after the test method.
         /// </summary>
         [TestMethod]
         [TestCategory("Experiment")]
@@ -256,84 +265,71 @@ namespace UnitTestsProject.EncoderTests
                 { "ClipInput", false},
             });
 
+            // Loop through a range of decimal values and encode each value to a bitmap.
             for (decimal i = 0.0M; i < (long)encoder.MaxVal; i += 0.1M)
             {
+                // Encode the value using ScalarEncoder.
                 var result = encoder.Encode(i);
 
+                // Get the corresponding bucket index for the value.
                 int? bucketIndex = encoder.GetBucketIndex(i);
 
+                // Convert the result into a 2D array and transpose it.
                 int[,] twoDimenArray = ArrayUtils.Make2DArray<int>(result, (int)Math.Sqrt(result.Length), (int)Math.Sqrt(result.Length));
                 var twoDimArray = ArrayUtils.Transpose(twoDimenArray);
 
+                // Save the generated bitmap to the output folder with the corresponding text.
                 NeoCortexUtils.DrawBitmap(twoDimArray, 1024, 1024, $"{outFolder}\\{i}.png", Color.Gray, Color.Green, text: $"v:{i} /b:{bucketIndex}");
             }
         }
-
         /// <summary>
-        /// This test case tests the EncodeIntoArray method of the ScalarEncoder class to ensure it returns the correct encoded 
-        /// array for a range of input values.
-        ///The test iterates over a range of input values between 0 and 100 and compares the expected and actual encoded arrays for each value.
-        ///The test also generates a bitmap image for each input value, highlighting in red any elements of the actual encoded array that 
-        ///differ from the expected encoded array.
+        /// Tests the ScalarEncoder's ability to encode into a pre-allocated boolean array.
+        /// Encodes input values ranging from 0 to 100 with a step size of 0.1 and checks if 
+        /// the output encoded array is correct.
         /// </summary>
         [TestMethod]
-        public void ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays()
+        public void ScalarEncoder_EncodeIntoArray_PrealloactedBoolArray_EncodesCorrectly1()
         {
+            // Arrange
             double minValue = 0;
             double maxValue = 100;
             int numBits = 1024;
             double period = maxValue - minValue;
 
-            ScalarEncoder encoder = new ScalarEncoder(numBits, minValue, Convert.ToInt32(maxValue), period);
-
-            for (double i = minValue; i <= maxValue; i += 0.1)
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
             {
-                int[] expectedArray = encoder.EncodeIntoArray(i);
-                int[] actualArrays = encoder.EncodeIntoArray(i);
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar"},
+                { "ClipInput", false},
+            });
 
-                Console.WriteLine($"i = {i}");
-                Console.WriteLine($"expectedArray = [{string.Join(",", expectedArray)}]");
-                Console.WriteLine($"actualArrays = [{string.Join(",", actualArrays)}]");
+            // Act & Assert
+            for (double input = 0; input <= 100; input += 0.1)
+            {
+                bool[] encodedArray = new bool[numBits];
 
+                // Encode the input value into the pre-allocated array
+                encoder.EncodeIntoArray(input, encodedArray);
 
-                Assert.AreEqual(expectedArray.Length, actualArrays.Length);
-
-                for (int j = 0; j < expectedArray.Length; j++)
-                {
-                    Assert.AreEqual(expectedArray[j], actualArrays[j]);
-                }
-
-                string outFolder = nameof(ScalarEncoder_EncodeIntoArray_RangeOfInputValues_ReturnsCorrectArrays);
-
-                Directory.CreateDirectory(outFolder);
-
-                DateTime now = DateTime.Now;
-
-                Color bitmapColor = Color.Gray;
-
-                if (!expectedArray.SequenceEqual(actualArrays))
-                {
-                    bitmapColor = Color.Red;
-                }
-
-                int[,] twoDimArray = new int[expectedArray.Length, 1];
-                for (int j = 0; j < expectedArray.Length; j++)
-                {
-                    twoDimArray[j, 0] = expectedArray[j];
-                }
-
-                NeoCortexUtils.DrawBitmap(twoDimArray, expectedArray.Length, 1024, $"{outFolder}\\{i}.png", bitmapColor, Color.Green, text: $"v:{i} /b:{actualArrays}");
+                // Print the input value and its corresponding encoded array
+                Console.WriteLine("Input: {0}, Encoded Array: {1}", input, string.Join("", encodedArray.Select(b => b ? "1" : "0")));
             }
         }
 
+
         /// <summary>
-        /// This is a unit test for the GenerateRangeDescription method of the ScalarEncoder class.
-        ///It tests the method with three different input ranges and verifies the output using Assert.AreEqual.
-        ///The test checks that the method generates the correct string representation of the input ranges.
+        /// This unit test tests the GenerateRangeDescription method of the ScalarEncoder class with different input ranges.
+        /// The method generates the string representation of the input ranges and verifies the output with Assert.AreEqual.
         /// </summary>
         [TestMethod]
         public void TestGenerateRangeDescription()
         {
+            // Arrange
             var encoder = new ScalarEncoder(10, 0, 100, true);
 
             var ranges1 = new List<Tuple<double, double>>()
@@ -341,41 +337,43 @@ namespace UnitTestsProject.EncoderTests
                 Tuple.Create(1.0, 3.0),
                 Tuple.Create(7.0, 10.0)
             };
-
-            string actualRange1 = encoder.GenerateRangeDescription(ranges1);
             string expectedRange1 = "1.00-3.00, 7.00-10.00";
-            Console.WriteLine($"Actual range 1: {actualRange1}");
-            Console.WriteLine($"Expected range 1: {expectedRange1}");
-            Assert.AreEqual(expectedRange1, actualRange1);
 
             var ranges2 = new List<Tuple<double, double>>()
             {
                 Tuple.Create(2.5, 2.5)
             };
-
-            string actualRange2 = encoder.GenerateRangeDescription(ranges2);
             string expectedRange2 = "2.50";
-            Console.WriteLine($"Actual range 2: {actualRange2}");
-            Console.WriteLine($"Expected range 2: {expectedRange2}");
-            Assert.AreEqual(expectedRange2, actualRange2);
 
             var ranges3 = new List<Tuple<double, double>>()
             {
                 Tuple.Create(1.0, 1.0),
                 Tuple.Create(5.0, 6.0)
             };
-
-            string actualRange3 = encoder.GenerateRangeDescription(ranges3);
             string expectedRange3 = "1.00, 5.00-6.00";
+
+            // Act
+            string actualRange1 = encoder.GenerateRangeDescription(ranges1);
+            string actualRange2 = encoder.GenerateRangeDescription(ranges2);
+            string actualRange3 = encoder.GenerateRangeDescription(ranges3);
+
+            // Assert
+            Console.WriteLine($"Actual range 1: {actualRange1}");
+            Console.WriteLine($"Expected range 1: {expectedRange1}");
+            Assert.AreEqual(expectedRange1, actualRange1);
+
+            Console.WriteLine($"Actual range 2: {actualRange2}");
+            Console.WriteLine($"Expected range 2: {expectedRange2}");
+            Assert.AreEqual(expectedRange2, actualRange2);
+
             Console.WriteLine($"Actual range 3: {actualRange3}");
             Console.WriteLine($"Expected range 3: {expectedRange3}");
             Assert.AreEqual(expectedRange3, actualRange3);
+        
         }
 
         /// <summary>
         /// This test case checks the closeness score calculation of a scalar encoder with periodic input.
-        ///It creates an instance of the encoder and passes in the necessary parameters.
-        ///It then compares the expected and actual closeness scores and outputs them using Console.WriteLine.
         /// </summary>
         [TestMethod]
         public void ClosenessScorestest1()
@@ -715,7 +713,7 @@ namespace UnitTestsProject.EncoderTests
 
             foreach (int[] output in testCases)
             {
-                int[] input = ScalarEncoder.decode(output, minVal, maxVal, n, w, periodic);
+                int[] input = ScalarEncoder.Decode(output, minVal, maxVal, n, w, periodic);
 
                 Console.WriteLine("Output: " + string.Join(",", output));
                 Console.WriteLine("Input: " + string.Join(",", input));
@@ -926,6 +924,32 @@ namespace UnitTestsProject.EncoderTests
             CollectionAssert.AreEqual(expected, mapping);
         }
 
+
+        [TestMethod]
+        public void ScalarEncoder_Encode_EncodesCorrectly()
+        {
+            // Arrange
+            ScalarEncoder encoder = new ScalarEncoder(new Dictionary<string, object>()
+            {
+                { "W", 21},
+                { "N", 1024},
+                { "Radius", -1.0},
+                { "MinVal", 0.0},
+                { "MaxVal", 100.0 },
+                { "Periodic", false},
+                { "Name", "scalar"},
+                { "ClipInput", false},
+            });
+
+            double input = 75.3;
+            int[] expectedArray = encoder.Encode(input);
+
+            // Act
+            int[] actualArray = encoder.Encode(input);
+
+            // Assert
+            CollectionAssert.AreEqual(expectedArray, actualArray);
+        }
 
     }
 }

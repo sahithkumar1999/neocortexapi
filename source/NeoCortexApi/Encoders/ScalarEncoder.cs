@@ -37,49 +37,9 @@ namespace NeoCortexApi.Encoders
         /// </summary>
         public override bool IsDelta => throw new NotImplementedException();
 
-        /// <summary>
-        /// Gets the Width
-        /// </summary>
         public override int Width => throw new NotImplementedException();
 
-        public int NumBits { get; private set; }
-        public double PeriodicRadius { get; private set; }
-        public double BucketWidth { get; private set; }
-        public int NumBuckets { get; private set; }
-        public double[] Centers { get; private set; }
-
-
-        public ScalarEncoder(double minValue, double maxValue, int numBits, double period = 0, double periodicRadius = 0)
-        {
-            BucketWidth = (maxValue - minValue) / (numBits - (period > 0 ? 2 : 1));
-            this.NumBuckets = numBits - (period > 0 ? 1 : 0);
-            this.NumBits = numBits;
-            this.PeriodicRadius = periodicRadius;
-
-            if (period > 0)
-            {
-                // Calculate the centers for a periodic encoder
-                this.Centers = new double[this.NumBuckets];
-                double halfWidth = this.BucketWidth / 2.0;
-                double periodOffset = period / 2.0;
-                for (int i = 0; i < this.NumBuckets; i++)
-                {
-                    double center = minValue + halfWidth + i * this.BucketWidth;
-                    this.Centers[i] = ((center + periodOffset) % period) - periodOffset;
-                }
-            }
-            else
-            {
-                // Calculate the centers for a non-periodic encoder
-                this.Centers = new double[this.NumBuckets];
-                double halfWidth = this.BucketWidth / 2.0;
-                for (int i = 0; i < this.NumBuckets; i++)
-                {
-                    this.Centers[i] = minValue + halfWidth + i * this.BucketWidth;
-                }
-            }
-        }
-
+       
         /// <summary>
         /// Initializes a new instance of the <see cref="ScalarEncoderExperimental"/> class.
         /// </summary>
@@ -238,8 +198,9 @@ namespace NeoCortexApi.Encoders
         /// <param name="w"></param>
         /// <param name="periodic"></param>
         /// <returns></returns>
-        public static int[] decode(int[] output, int minVal, int maxVal, int n, double w, bool periodic)
+        public static int[] Decode(int[] output, int minVal, int maxVal, int n, double w, bool periodic)
         {
+            // Identify the runs of 1s in the output array
             List<int[]> runs = new List<int[]>();
             int start = -1;
             int prev = 0;
@@ -269,6 +230,7 @@ namespace NeoCortexApi.Encoders
             {
                 runs.Add(new int[] { start, prev, count });
             }
+            // Adjust periodic input space if necessary
             if (periodic && runs.Count > 1)
             {
                 int[] first = runs[0];
@@ -280,6 +242,7 @@ namespace NeoCortexApi.Encoders
                     runs.RemoveAt(runs.Count - 1);
                 }
             }
+            // Map the runs of 1s to ranges of input values based on the specified parameters
             List<int> input = new List<int>();
             foreach (int[] run in runs)
             {
@@ -303,6 +266,7 @@ namespace NeoCortexApi.Encoders
                     }
                 }
             }
+            // Sort the decoded input array and adjust periodic input space if necessary
             input.Sort();
             if (periodic && input.Count > 0)
             {
@@ -341,69 +305,67 @@ namespace NeoCortexApi.Encoders
         /// The active bits are set based on the bucket index calculated for the input value
         /// </summary>
         /// <param name="input"></param>
-        /// <returns></returns>
-        // EncodeIntoArray method
-        public int[] EncodeIntoArray(double input)
+        /// <returns>The array of active bits.</returns>
+        public bool[] EncodeIntoArray(double inputData, bool[] output)
         {
-            int[] activeBits = new int[this.NumBits];
-
-            if (this.PeriodicRadius > 0)
+            double input = Convert.ToDouble(inputData, CultureInfo.InvariantCulture);
+            if (input == double.NaN)
             {
-                // Calculate the bucket index for a periodic encoder
-                int bucketIndex = -1;
-                for (int i = 0; i < this.NumBuckets; i++)
+                return output;
+            }
+
+            int? bucketVal = GetFirstOnBit(input);
+            if (bucketVal != null)
+            {
+                int bucketIdx = bucketVal.Value;
+                //Arrays.fill(output, 0);
+                int minbin = bucketIdx;
+                int maxbin = minbin + 2 * HalfWidth;
+                // Adjust bins for periodic encoders
+                if (Periodic)
                 {
-                    if (Math.Abs(input - this.Centers[i]) <= this.PeriodicRadius)
+                    if (maxbin >= N)
                     {
-                        bucketIndex = i;
-                        break;
+                        int bottombins = maxbin - N + 1;
+                        for (int i = 0; i < bottombins; i++)
+                        {
+                            output[i] = true;
+                        }
+                        maxbin = N - 1;
+                    }
+                    if (minbin < 0)
+                    {
+                        int topbins = -minbin;
+                        for (int i = 0; i < topbins; i++)
+                        {
+                            output[N - i - 1] = true;
+                        }
+                        minbin = 0;
                     }
                 }
-
-                // Set active bits
-                if (bucketIndex != -1)
+                // Set active bits for the calculated bin range
+                for (int i = minbin; i <= maxbin; i++)
                 {
-                    int startBit = bucketIndex * (this.NumBits / this.NumBuckets);
-                    int endBit = startBit + (this.NumBits / this.NumBuckets) - 1;
-                    if (endBit < activeBits.Length) // Check if endBit is within the bounds of the array
-                    {
-                        for (int i = startBit; i <= endBit; i++)
-                        {
-                            activeBits[i] = 1;
-                        }
-                    }
+                    output[i] = true;
                 }
             }
-            else
-            {
-                // Calculate the bucket index for a non-periodic encoder
-                int bucketIndex = (int)Math.Floor((input - (this.Centers[0] - this.BucketWidth / 2.0)) / this.BucketWidth);
 
-                // Set active bits
-                if (bucketIndex >= 0 && bucketIndex < this.NumBuckets)
-                {
-                    int startBit = bucketIndex;
-                    int endBit = startBit + (this.NumBits / this.NumBuckets) - 1;
-                    if (endBit < activeBits.Length) // Check if endBit is within the bounds of the array
-                    {
-                        for (int i = startBit; i <= endBit; i++)
-                        {
-                            activeBits[i] = 1;
-                        }
-                    }
-                }
-            }
-            return activeBits;
+            // Output 1-D array of same length resulted in parameter N    
+            return output;
         }
 
 
 
+
+
         /// <summary>
-        /// Gets the index of the first non-zero bit.
+        /// Given an input value, returns the index of the first non-zero bit in the 
+        /// corresponding binary array.
         /// </summary>
-        /// <param name="input"></param>
-        /// <returns>Null in a case of an error.</returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="input">The input value to be encoded into a binary array.</param>
+        /// <returns>The index of the first non-zero bit in the binary array for the given input value. 
+        /// Returns null if the input value is NaN.</returns>
+        /// <exception cref="ArgumentException">Thrown when the input value is out of range or invalid.</exception>
         protected int? GetFirstOnBit(double input)
         {
             if (input == double.NaN)
@@ -412,10 +374,12 @@ namespace NeoCortexApi.Encoders
             }
             else
             {
+                // Check if input value is within the specified range
                 if (input < MinVal)
                 {
                     if (ClipInput && !Periodic)
                     {
+                        // Clip the input value to the minimum value if ClipInput flag is set
                         Debug.WriteLine("Clipped input " + Name + "=" + input + " to minval " + MinVal);
 
                         input = MinVal;
@@ -426,7 +390,7 @@ namespace NeoCortexApi.Encoders
                     }
                 }
             }
-
+            // Check if input value is within the periodic range
             if (Periodic)
             {
                 if (input >= MaxVal)
@@ -434,12 +398,14 @@ namespace NeoCortexApi.Encoders
                     throw new ArgumentException($"Input ({input}) greater than periodic range ({MinVal} - {MaxVal}");
                 }
             }
+            // Check if input value is within the non-periodic range
             else
             {
                 if (input > MaxVal)
                 {
                     if (ClipInput)
                     {
+                        // Clip the input value to the maximum value if ClipInput flag is set
 
                         Debug.WriteLine($"Clipped input {Name} = {input} to maxval MaxVal");
                         input = MaxVal;
@@ -452,6 +418,7 @@ namespace NeoCortexApi.Encoders
             }
 
             int centerbin;
+            // Calculate the center bin index based on whether the encoder is periodic or not
             if (Periodic)
             {
                 centerbin = (int)((input - MinVal) * NInternal / Range + Padding);
@@ -460,7 +427,7 @@ namespace NeoCortexApi.Encoders
             {
                 centerbin = ((int)(((input - MinVal) + Resolution / 2) / Resolution)) + Padding;
             }
-
+            // Return the index of the first non-zero bit in the binary array for the given input value
             return centerbin - HalfWidth;
         }
 
@@ -590,12 +557,10 @@ namespace NeoCortexApi.Encoders
 
 
         /// <summary>
-        /// This method takes a list of ranges and returns a string that describes them.
-        ///It iterates through the list of ranges and constructs the string by appending each range's start and end values.
-        ///If the start and end values of a range are the same, it only appends the start value to the string.
+        /// Generates a string description of a list of ranges.
         /// </summary>
-        /// <param name="ranges"></param>
-        /// <returns></returns>
+        /// <param name="ranges">A list of Tuple values representing the start and end values of each range.</param>
+        /// <returns>A string representation of the ranges, where each range is separated by a comma and space.</returns>
         public string GenerateRangeDescription(List<Tuple<double, double>> ranges)
         {
             var desc = "";
@@ -689,19 +654,19 @@ namespace NeoCortexApi.Encoders
 
 
         /// <summary>
-        /// This method calculates the closeness score between two sets of scalar values, expValues and actValues.
-        ///The method takes an optional boolean parameter 'fractional', which if set to true, calculates the closeness 
-        ///score as a fraction of the possible range of values.
-        ///The method returns an array containing the calculated closeness score.
+        /// Calculates closeness scores between expected and actual values using the ScalarEncoder's parameters.
         /// </summary>
-        /// <param name="expValues"></param>
-        /// <param name="actValues"></param>
-        /// <param name="fractional"></param>
-        /// <returns></returns>
+        /// <param name="expectedValues">Array of expected values.</param>
+        /// <param name="actualValues">Array of actual values.</param>
+        /// <param name="fractional">Flag to determine whether fractional or absolute closeness score should be returned.</param>
+        /// <returns>An array of closeness scores.</returns>
         public double[] ClosenessScores(double[] expValues, double[] actValues, bool fractional = true)
         {
+            // Get the first value from both arrays.
             double expValue = expValues[0];
             double actValue = actValues[0];
+
+            // Calculate the absolute difference between the two values, considering periodicity if enabled.
             double err;
 
             if (Periodic)
@@ -715,19 +680,29 @@ namespace NeoCortexApi.Encoders
                 err = Math.Abs(expValue - actValue);
             }
 
+            // Calculate the closeness score.
             double closeness;
             if (fractional)
             {
+                // Calculate the maximum possible range of values, considering clipping and periodicity.
                 double range = (MaxVal - MinVal) + (ClipInput ? 0 : (2 * (MaxVal - MinVal) / (N - 1)));
+
+                // Calculate the percentage of error relative to the maximum range.
                 double pctErr = err / range;
+
+                // Cap the percentage at 100% to ensure that closeness score is always >= 0.
                 pctErr = Math.Min(1.0, pctErr);
+
+                // Calculate the closeness score.
                 closeness = 1.0 - pctErr;
             }
             else
             {
+                // Calculate the absolute closeness score.
                 closeness = err;
             }
 
+            // Return an array containing the calculated closeness score.
             return new double[] { closeness };
         }
 
@@ -758,14 +733,13 @@ namespace NeoCortexApi.Encoders
 
 
         /// <summary>
-        /// This method calculates the lower and upper bounds of a given input value in a range of values.
-        ///It throws an exception if the input value is outside the encoder's range or is not a valid number.
-        ///It also prints the bucket width, bucket index, bucket lower bound, and bucket upper bound to the console.
+        /// Calculates the lower and upper bounds of a given input value in a range of values.
+        /// Throws an exception if the input value is outside the encoder's range or is not a valid number.
         /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
-        /// <exception cref="InvalidOperationException"></exception>
+        /// <param name="input">The input value to be bucketized.</param>
+        /// <returns>An array containing the bucket lower and upper bounds.</returns>
+        /// <exception cref="ArgumentException">Thrown when the input value is not a valid number or is outside of the encoder's range.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when the bucket width is not valid.</exception>
         public double[] GetBucketValues(double input)
         {
             // Check for edge cases
@@ -777,7 +751,7 @@ namespace NeoCortexApi.Encoders
             {
                 throw new ArgumentException("Input value is outside of the encoder's range.");
             }
-            NumBuckets = 100;
+            int NumBuckets = 100;
             // Calculate the width of each bucket
             double bucketWidth = (this.MaxVal - this.MinVal) / (double)this.NumBuckets;
             if (double.IsInfinity(bucketWidth) || double.IsNaN(bucketWidth) || bucketWidth <= 0.0)
@@ -804,54 +778,72 @@ namespace NeoCortexApi.Encoders
 
 
         /// <summary>
-        /// This is a method that returns an array of binary values representing the mapping of an input value to a set of buckets. 
-        /// The mapping is determined by whether the input value falls within a given bucket or not. The method takes into account 
-        /// whether the encoder is periodic or not, and the number of buckets used. If the encoder is periodic, the method calculates 
-        /// the bucket width and index based on the input value, while if the encoder is non-periodic, it calculates the radius and 
-        /// bucket width, and uses these to determine the bucket index and mapping.
+        /// Returns an array of binary values representing the mapping of an input value to a set of buckets.
         /// </summary>
-        /// <param name="input"></param>
-        /// <param name="Periodic"></param>
-        /// <param name="numBuckets"></param>
-        /// <returns></returns>
+        /// <param name="input">The input value to be mapped to buckets.</param>
+        /// <param name="isPeriodic">Specifies whether the encoder is periodic or not.</param>
+        /// <param name="numBuckets">The number of buckets to be used for mapping.</param>
+        /// <returns>An array of binary values representing the mapping of the input value to the buckets.</returns>
         public int[] _getTopDownMapping(double input, bool Periodic, int numBuckets)
         {
             int[] mapping = new int[numBuckets];
 
+            // If the encoder is periodic
             if (Periodic)
             {
-                double bucketWidth = (double)1.0 / (double)numBuckets;
+                // Calculate the width of each bucket
+                double bucketWidth = 1.0 / numBuckets;
+
+                // Calculate the index of the bucket for the input value
                 int bucketIndex = (int)Math.Floor(input / bucketWidth);
 
+                // Loop through each bucket
                 for (int i = 0; i < numBuckets; i++)
                 {
+                    // Calculate the distance between the input value and the bucket
                     double dist = Math.Abs(i - bucketIndex) * bucketWidth;
+
+                    // Set the mapping value based on the distance
                     mapping[i] = (dist <= bucketWidth / 2) ? 1 : 0;
                 }
             }
+            // If the encoder is not periodic
             else
             {
+                // Get the maximum and minimum value and the radius from the encoder parameters
                 double maxVal = MaxVal;
                 double minVal = MinVal;
                 double radius = Radius;
 
+                // If the radius is not specified
                 if (radius == -1)
                 {
+                    // Calculate the radius based on the number of buckets
                     radius = (maxVal - minVal) / numBuckets / 2;
                 }
 
+                // Calculate the width and half-width of each bucket
                 double bucketWidth = radius * 2;
                 double halfBucket = bucketWidth / 2.0;
+
+                // Calculate the index of the bucket for the input value
                 int bucketIndex = (int)Math.Floor((input - minVal + radius) / bucketWidth);
 
+                // Loop through each bucket
                 for (int i = 0; i < numBuckets; i++)
                 {
+                    // Calculate the start value of the bucket
                     double bucketStart = (i * bucketWidth) + minVal - radius;
+
+                    // Calculate the distance between the input value and the start of the bucket
                     double dist = Math.Abs(bucketStart - input);
+
+                    // Set the mapping value based on the distance
                     mapping[i] = (dist <= halfBucket) ? 1 : 0;
                 }
             }
 
+            // Return the mapping array
             return mapping;
         }
 

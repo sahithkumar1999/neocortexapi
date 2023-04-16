@@ -90,6 +90,11 @@ namespace NeoCortexApi.Encoders
                 Radius = -1.0;
                 Periodic = false;
                 ClipInput = false;
+                NumBits = 0;
+                PeriodicRadius= 0;
+                BucketWidth= 0;
+                NumBuckets= 0;
+
 
                 foreach (var item in encoderSettings)
                 {
@@ -194,6 +199,12 @@ namespace NeoCortexApi.Encoders
         /// This happens only if Periodic is set on false.
         /// </summary>
         public bool ClipInput { get => (bool)this["ClipInput"]; set => this["ClipInput"] = (bool)value; }
+
+        public int NumBits { get; private set; }
+        public double PeriodicRadius { get; private set; }
+        public double BucketWidth { get; private set; }
+        public int NumBuckets { get; private set; }
+        public double[] Centers { get; private set; }
 
         public int Padding { get => (int)this["Padding"]; set => this["Padding"] = value; }
 
