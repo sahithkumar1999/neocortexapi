@@ -627,15 +627,5 @@ namespace NeoCortexApi.Entities
 
             return inMemDict;
         }
-
-        public List<Encoders.EncoderResult> GetBucketInfo(int[] buckets)
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<Encoders.EncoderResult> TopDownCompute(int[] encoded)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
