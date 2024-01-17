@@ -16,7 +16,7 @@ namespace NeoCortexApi
     /// For example, assume there ar two sequences: ABCD and ABGHI. By presenting the element B, the predictor is not sure if the next element is C or D. 
     /// When presenting after B the element C, the predictor knows that the next element must be C.
     /// </summary>
-    public class Predictor : ISerializable
+    public class Predictor
     {
         private Connections connections { get; set; }
 
@@ -32,7 +32,7 @@ namespace NeoCortexApi
         /// <param name="classifier">The classifier that contains the state of learned sequences.</param>
 
         public Predictor(CortexLayer<object, object> layer, Connections connections, HtmClassifier<string, ComputeCycle> classifier)
-        { 
+        {
             this.connections = connections;
             this.layer = layer;
             this.classifier = classifier;
@@ -64,9 +64,7 @@ namespace NeoCortexApi
 
         public void Serialize(object obj, string name, StreamWriter sw)
         {
-           this.connections.Serialize(obj, name, sw);
-            //this.layer.Serialize(??);
-            //this.classifier.Ser
+            this.connections.Serialize(obj, name, sw);
         }
 
         public static object Deserialize<T>(StreamReader sr, string name)
